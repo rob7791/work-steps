@@ -1,0 +1,27 @@
+#!/bin/sh
+# Lancia il binario `wk` giusto per sistema e architettura (cartelle bin/<os>-<arch>/, vedi scripts/build.sh).
+# Se il binario manca: errore chiaro, ma silenzio (exit 0) quando è chiamato da un hook.
+d=$(cd "$(dirname "$0")" && pwd)
+case "$(uname -s)" in
+  Linux) os=linux ;;
+  Darwin) os=macos ;;
+  MINGW*|MSYS*|CYGWIN*) os=windows ;;
+  *) os=unknown ;;
+esac
+case "$(uname -m)" in
+  x86_64|amd64) arch=x86_64 ;;
+  aarch64|arm64) arch=aarch64 ;;
+  *) arch=unknown ;;
+esac
+exe="$d/$os-$arch/wk"
+[ "$os" = windows ] && exe="$exe.exe"
+if [ ! -x "$exe" ]; then
+  # sviluppo: usa la build locale se c'è
+  for alt in "$d/../cli/zig-out/bin/wk"; do [ -x "$alt" ] && exe="$alt"; done
+fi
+if [ ! -x "$exe" ]; then
+  [ "$1" = hook ] && exit 0
+  echo "wk: nessun binario per $os-$arch in $d (esegui scripts/build.sh o installa wk nel PATH)" >&2
+  exit 127
+fi
+exec "$exe" "$@"
