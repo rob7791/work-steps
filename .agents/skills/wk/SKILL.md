@@ -1,6 +1,6 @@
 ---
 name: wk
-description: Usa la CLI `wk` per creare, leggere e aggiornare i work a checklist (cartelle `.work/<nome>/` con entrypoint.md, plan.md e tasks-step-*.md). Da usare per iniziare o pianificare un nuovo work, riprendere un work, trovare la prossima voce, spuntare/aggiungere/modificare voci, classificare per la delega e gestire dipendenze, filtrare per tag o chiavi, aggiornare l'entrypoint — sempre senza editare a mano i markdown.
+description: Usa la CLI `wk` per creare, leggere e aggiornare i work a checklist (cartelle `.work/<nome>/` con entrypoint.md, plan.md e tasks-step-*.md). Da usare per creare la struttura di un work già definito (se il lavoro è ancora vago o da pianificare, prima la skill `wk-brief`), riprendere un work, trovare la prossima voce, spuntare/aggiungere/modificare voci, classificare per la delega e gestire dipendenze, filtrare per tag o chiavi, aggiornare l'entrypoint — sempre senza editare a mano i markdown.
 ---
 
 # wk

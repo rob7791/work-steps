@@ -16,7 +16,9 @@ Con Codex o Antigravity, o senza plugin: vedi [Agenti](#agenti). Serve `wk` nel 
 
 **2. Chiedi all'agente di creare o riprendere un work**, in chat e in linguaggio naturale:
 
-- «Crea un work per migrare X a Y: pianifica gli step e le voci.»
+- «Voglio pianificare un work per migrare X a Y» (o `/work-steps:wk-brief`): skill `wk-brief`, un colloquio iniziale ad alto
+  livello, senza soluzioni né implementazione, che chiarisce obiettivi e decisioni aperte e poi crea il work. Alla fine
+  puoi fare `/clear`: il contesto sta nel work.
 - «Riprendi il work `.work/nome-work`.»
 
 **3. Per lavorare a voci in autonomia** usa la modalità automatica. Il prompt va scritto così:
