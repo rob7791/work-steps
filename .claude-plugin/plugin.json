@@ -12,5 +12,7 @@
     "delegation",
     "cli"
   ],
+  "homepage": "https://github.com/rob7791/work-steps",
+  "repository": "https://github.com/rob7791/work-steps",
   "skills": "./.agents/skills/"
 }
