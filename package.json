@@ -1,1 +1,1 @@
-{ "name": "work-steps", "version": "0.2.0", "license": "MIT", "type": "module", "scripts": { "start": "node server.mjs" } }
+{ "name": "work-steps", "version": "0.3.0", "license": "MIT", "type": "module", "scripts": { "start": "node server.mjs" } }
