@@ -211,6 +211,20 @@ const server = http.createServer(async (req, res) => {
       const r = await runWk(['reply', '-w', dir, '--', id, answer]);
       return json(res, r.ok ? 200 : 409, r.ok ? { ok: true } : { error: r.error });
     }
+    if ((url.pathname === '/api/defer' || url.pathname === '/api/undefer') && req.method === 'POST') {
+      if (req.headers.origin && new URL(req.headers.origin).host !== req.headers.host) return json(res, 403, { error: 'origin' });
+      const b = await readBody(req);
+      const dir = path.resolve(String(b.work || '')), id = String(b.id || '');
+      const note = String(b.note || '').replace(/\s*\r?\n\s*/g, ' ').trim();
+      if (!/^[A-Za-z0-9_-]{1,32}$/.test(id)) return json(res, 400, { error: 'id non valido' });
+      if (note.length > 400) return json(res, 400, { error: 'nota troppo lunga' });
+      let known = false;
+      for (const p of (await loadConfig()).paths) if ((await findWorks(p)).works.includes(dir)) { known = true; break; }
+      if (!known) return json(res, 404, { error: 'work non configurato' });
+      const args = url.pathname === '/api/defer' ? ['defer', '-w', dir, ...(note ? ['--note', note] : []), '--', id] : ['undefer', '-w', dir, '--', id];
+      const r = await runWk(args);
+      return json(res, r.ok ? 200 : 409, r.ok ? { ok: true } : { error: r.error });
+    }
     if (url.pathname === '/api/ls') { // browser cartelle per la configurazione
       const dir = path.resolve(expand(url.searchParams.get('path') || '~'));
       const ents = await fs.readdir(dir, { withFileTypes: true });

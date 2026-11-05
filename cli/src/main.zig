@@ -79,6 +79,8 @@ const Opts = struct {
     first_step: ?[]const u8 = null,
     from: ?u32 = null,
     held: bool = false,
+    deferred: bool = false,
+    note: ?[]const u8 = null,
     claimed: bool = false,
     unclaimed: bool = false,
     any: bool = false,
@@ -157,6 +159,7 @@ fn parseOpts(a: std.mem.Allocator, cmd: []const u8, args: []const []const u8) !O
         if (std.mem.eql(u8, name, "delegable")) { o.delegable = true; continue; }
         if (std.mem.eql(u8, name, "include-blocked")) { o.include_blocked = true; continue; }
         if (std.mem.eql(u8, name, "held")) { o.held = true; continue; }
+        if (std.mem.eql(u8, name, "deferred")) { o.deferred = true; continue; }
         if (std.mem.eql(u8, name, "claimed")) { o.claimed = true; continue; }
         if (std.mem.eql(u8, name, "unclaimed")) { o.unclaimed = true; continue; }
         if (std.mem.eql(u8, name, "any")) { o.any = true; continue; }
@@ -197,6 +200,7 @@ fn parseOpts(a: std.mem.Allocator, cmd: []const u8, args: []const []const u8) !O
         else if (std.mem.eql(u8, name, "claimed-by")) o.claimed_by = val
         else if (std.mem.eql(u8, name, "result")) o.result = val
         else if (std.mem.eql(u8, name, "by")) o.by = val
+        else if (std.mem.eql(u8, name, "note")) o.note = val
         else if (std.mem.eql(u8, name, "option")) try o.options.append(a, val)
         else if (std.mem.eql(u8, name, "default")) o.default_answer = val
         else if (std.mem.eql(u8, name, "wait")) o.wait_min = std.fmt.parseInt(u32, val, 10) catch return fail("--wait: numero di minuti non valido '{s}'", .{val})
@@ -324,7 +328,7 @@ fn lockWork(dir: []const u8) !void {
 }
 
 fn needsLock(cmd: []const u8, o: *const Opts) bool {
-    const writers = [_][]const u8{ "add", "check", "uncheck", "edit", "set", "unset", "tag", "rm", "classify", "dep", "step-set", "step-status", "new-step", "hold", "resolve", "claim", "unclaim" };
+    const writers = [_][]const u8{ "add", "check", "uncheck", "edit", "set", "unset", "tag", "rm", "classify", "dep", "step-set", "step-status", "new-step", "hold", "resolve", "defer", "undefer", "claim", "unclaim" };
     for (writers) |x| if (std.mem.eql(u8, cmd, x)) return true;
     const sub = if (o.pos.items.len > 0) o.pos.items[0] else "";
     if (std.mem.eql(u8, cmd, "section")) return std.mem.eql(u8, sub, "set");
@@ -420,7 +424,9 @@ fn passes(a: std.mem.Allocator, w: *const W.Work, it: W.Item, o: *const Opts, st
     }
     const claim = O.fieldValue(it, "claimed_by");
     const is_held = O.fieldValue(it, "hold") != null;
-    if (o.held and !is_held) return false;
+    const is_deferred = is_held and O.fieldValue(it, "deferred") != null;
+    if (o.held and (!is_held or is_deferred)) return false;
+    if (o.deferred and !is_deferred) return false;
     if (o.claimed and claim == null) return false;
     if (o.unclaimed and claim != null) return false;
     if (o.claimed_by) |n| {
@@ -542,12 +548,12 @@ fn cmdSteps(c: Ctx, o: *const Opts) !void {
             for (s.items) |it| if (it.done) { d += 1; };
             try out.print("{s: <10} {d: >3}/{d: <3} {s: <12} {s}\n", .{ s.key, d, s.items.len, s.status, s.title });
         }
-        try out.print("totale: {d}/{d}\ndisponibili {d} · bloccate {d} · in attesa {d} · in carico {d} · delegabili {d}\n", .{ done, total, n_avail, n_blocked, n_held, n_claimed, n_deleg });
+        try out.print("totale: {d}/{d}\ndisponibili {d} · bloccate {d} · in attesa {d} · rimandate {d} · in carico {d} · delegabili {d}\n", .{ done, total, n_avail, n_blocked, n_held, cnt.deferred, n_claimed, n_deleg });
         return;
     }
     try out.writeAll("{\"work\":");
     try O.jstr(out, w.dir);
-    try out.print(",\"done\":{d},\"total\":{d},\"open\":{d},\"available\":{d},\"blocked\":{d},\"held\":{d},\"claimed\":{d},\"delegable\":{d},\"answered\":{d},\"keys\":{{", .{ done, total, total - done, n_avail, n_blocked, n_held, n_claimed, n_deleg, cnt.answered });
+    try out.print(",\"done\":{d},\"total\":{d},\"open\":{d},\"available\":{d},\"blocked\":{d},\"held\":{d},\"deferred\":{d},\"claimed\":{d},\"delegable\":{d},\"answered\":{d},\"keys\":{{", .{ done, total, total - done, n_avail, n_blocked, n_held, cnt.deferred, n_claimed, n_deleg, cnt.answered });
     const refs_all = try allRefs(c.a, &w);
     for (try keyRows(c.a, &w, refs_all), 0..) |r, i| {
         if (i > 0) try out.writeByte(',');
@@ -598,7 +604,7 @@ fn cmdList(c: Ctx, o: *const Opts, next: bool) !void {
         for (ordered) |r| {
             const it = W.item(&w, r).*;
             const skip_blk = O.isBlocked(&w, it) and !(o.include_blocked or o.any or o.blocked);
-            const skip_held = O.fieldValue(it, "hold") != null and !(o.any or o.held);
+            const skip_held = O.fieldValue(it, "hold") != null and !(o.any or o.held or o.deferred);
             const skip_claim = O.fieldValue(it, "claimed_by") != null and !(o.any or o.claimed or o.claimed_by != null);
             if (skip_blk or skip_held or skip_claim) {
                 if (skip_blk) n_blocked += 1 else if (skip_held) n_held += 1 else n_claimed += 1;
@@ -778,6 +784,8 @@ fn setDone(c: Ctx, o: *const Opts, done: bool, cmd: []const u8) !void {
             }
             try dropField(c.a, &it, "claimed_by");
             try dropField(c.a, &it, "hold");
+            try dropField(c.a, &it, "deferred");
+            try dropField(c.a, &it, "defer_note");
             if (o.result) |rs| {
                 try checkLen("result", W.trim(rs), max_field);
                 try putField(c.a, &it, "result", W.trim(rs));
@@ -865,6 +873,7 @@ fn mergeSet(a: std.mem.Allocator, w: *const W.Work, it: *W.Item, kv_in: []const 
     if (std.ascii.eqlIgnoreCase(key, "deps") or std.ascii.eqlIgnoreCase(key, "deps_reason")) return fail("'{s}' si gestisce con `wk dep add|rm|set`", .{key});
     if (std.ascii.eqlIgnoreCase(key, "mode") or std.ascii.eqlIgnoreCase(key, "mode_reason")) return fail("'{s}' si gestisce con `wk classify`", .{key});
     if (std.ascii.eqlIgnoreCase(key, "hold") or std.ascii.eqlIgnoreCase(key, "answer") or std.ascii.eqlIgnoreCase(key, "asked") or std.ascii.eqlIgnoreCase(key, "hold_options") or std.ascii.eqlIgnoreCase(key, "hold_default") or std.ascii.eqlIgnoreCase(key, "answered_at")) return fail("'{s}' si gestisce con `wk hold` / `wk resolve` / `wk reply`", .{key});
+    if (std.ascii.eqlIgnoreCase(key, "deferred") or std.ascii.eqlIgnoreCase(key, "defer_note")) return fail("'{s}' si gestisce con `wk defer` / `wk undefer`", .{key});
     if (std.ascii.eqlIgnoreCase(key, "claimed_by")) return fail("'claimed_by' si gestisce con `wk claim` / `wk unclaim`", .{});
     for (W.reserved_keys) |r| if (std.ascii.eqlIgnoreCase(r, key)) return fail("'{s}' è una chiave riservata", .{key});
     var use_key = key;
@@ -2011,6 +2020,8 @@ fn cmdHold(c: Ctx, o: *const Opts) !void {
         if (W.trim(op).len == 0) return fail("--option vuota", .{});
         if (std.mem.indexOf(u8, op, " | ") != null) return fail("--option non può contenere ' | '", .{});
     }
+    for (o.options.items) |op| if (isPostponeText(op)) return fail("l'opzione \"{s}\" è un rinvio: non va tra le risposte. Rimandare lo decide l'utente (pulsante \"Rimanda\" della dashboard) e si registra con `wk defer ID`", .{op});
+    if (o.default_answer) |d| if (isPostponeText(d)) return fail("--default \"{s}\" è un rinvio: non può essere la risposta proposta (vedi `wk help hold`)", .{d});
     if (o.options.items.len == 1) return fail("indica almeno due --option (oppure nessuna per una risposta libera)", .{});
     try checkLen("domanda", q, max_question);
     try putField(c.a, &it, "hold", q);
@@ -2028,6 +2039,8 @@ fn cmdHold(c: Ctx, o: *const Opts) !void {
     try dropField(c.a, &it, "asked");
     try dropField(c.a, &it, "answered_at");
     try dropField(c.a, &it, "claimed_by");
+    try dropField(c.a, &it, "deferred");
+    try dropField(c.a, &it, "defer_note");
     try W.commitItem(c.a, &w, r, it);
     try W.save(c.a, &w);
     try printWith(c, &w, &.{id}, o, "id,hold,hold_options,hold_default");
@@ -2044,6 +2057,8 @@ fn resolveItem(a: std.mem.Allocator, w: *const W.Work, id: []const u8, ans: []co
     try dropField(a, &it, "hold");
     try dropField(a, &it, "hold_options");
     try dropField(a, &it, "hold_default");
+    try dropField(a, &it, "deferred");
+    try dropField(a, &it, "defer_note");
     try W.commitItem(a, w, r, it);
 }
 
@@ -2062,12 +2077,83 @@ fn cmdResolve(c: Ctx, o: *const Opts) !void {
     try printWith(c, &w, &.{id}, o, "id,asked,answer");
 }
 
+/// Testo che esprime un rinvio ("Rimanda", "Non ancora", "più tardi"…): non è una risposta valida a una domanda.
+/// Le parole devono iniziare a inizio parola ("rimane" non è un rinvio, "rimanda" sì).
+fn isPostponeText(t: []const u8) bool {
+    const needles = [_][]const u8{ "rimand", "rinvi", "differi", "posticip", "non ancora", "più tardi", "piu tardi", "postpone", "defer" };
+    for (needles) |n| {
+        var from: usize = 0;
+        while (std.ascii.findIgnoreCase(t[from..], n)) |i| {
+            const at = from + i;
+            if (at == 0 or !std.ascii.isAlphabetic(t[at - 1])) return true;
+            from = at + 1;
+        }
+    }
+    return false;
+}
+
+/// Voci aperte che restano ferme (anche indirettamente) finché `id` non è chiusa.
+fn blockedBy(a: std.mem.Allocator, w: *const W.Work, id: []const u8) !usize {
+    var seen = std.StringHashMap(void).init(a);
+    var queue: List = .empty;
+    try queue.append(a, id);
+    var n: usize = 0;
+    var qi: usize = 0;
+    while (qi < queue.items.len) : (qi += 1) {
+        for (try G.dependents(a, w, queue.items[qi])) |r| {
+            const it = W.item(w, r).*;
+            if (it.done or it.id.len == 0 or seen.contains(it.id)) continue;
+            try seen.put(it.id, {});
+            try queue.append(a, it.id);
+            n += 1;
+        }
+    }
+    return n;
+}
+
+/// wk defer ID [--note "…"]: l'utente rimanda la risposta; la domanda resta intatta ma esce dalla coda.
+fn cmdDefer(c: Ctx, o: *const Opts) !void {
+    var w = try loadWork(c.a, o);
+    if (o.pos.items.len == 0) return fail("uso: wk defer ID [--note \"cosa si aspetta\"] (vedi `wk defer --help`)", .{});
+    const id = o.pos.items[0];
+    const r = try needItem(&w, id);
+    var it = W.item(&w, r).*;
+    if (it.done) return fail("{s} è già completata", .{id});
+    if (O.fieldValue(it, "hold") == null) return fail("{s} non ha una domanda in attesa: si rimanda solo una voce con `wk hold` (vedi `wk questions`)", .{id});
+    if (o.pos.items.len > 1) return fail("un solo ID per volta; la nota si passa con --note", .{});
+    try putField(c.a, &it, "deferred", (try nowIso(c.a))[0..10]);
+    if (o.note) |n| {
+        try noNewline(n, "--note");
+        try checkLen("--note", W.trim(n), max_field);
+        if (W.trim(n).len > 0) try putField(c.a, &it, "defer_note", W.trim(n)) else try dropField(c.a, &it, "defer_note");
+    } else try dropField(c.a, &it, "defer_note");
+    try W.commitItem(c.a, &w, r, it);
+    try W.save(c.a, &w);
+    try printWith(c, &w, &.{id}, o, "id,hold,deferred,defer_note");
+}
+
+/// wk undefer ID: rimette la domanda in coda.
+fn cmdUndefer(c: Ctx, o: *const Opts) !void {
+    var w = try loadWork(c.a, o);
+    if (o.pos.items.len != 1) return fail("uso: wk undefer ID", .{});
+    const id = o.pos.items[0];
+    const r = try needItem(&w, id);
+    var it = W.item(&w, r).*;
+    if (O.fieldValue(it, "deferred") == null) return fail("{s} non è rimandata (vedi `wk questions --deferred`)", .{id});
+    try dropField(c.a, &it, "deferred");
+    try dropField(c.a, &it, "defer_note");
+    try W.commitItem(c.a, &w, r, it);
+    try W.save(c.a, &w);
+    try printWith(c, &w, &.{id}, o, "id,hold");
+}
+
 fn cmdQuestions(c: Ctx, o: *const Opts) !void {
     const w = try loadWork(c.a, o);
     var o2 = o.*;
-    o2.held = true;
+    o2.held = !o.deferred;
     const refs = try collect(c.a, &w, &o2, false);
     const out = c.out;
+    const cn = computeCounters(&w);
     if (o.format != .json) {
         for (refs) |r| {
             const it = W.item(&w, r).*;
@@ -2076,13 +2162,20 @@ fn cmdQuestions(c: Ctx, o: *const Opts) !void {
                 continue;
             }
             try out.print("{s}  {s}\n   ? {s}\n", .{ it.id, it.label, O.fieldValue(it, "hold").? });
+            if (O.fieldValue(it, "deferred")) |dd| {
+                try out.print("     rimandata il {s}", .{dd});
+                if (O.fieldValue(it, "defer_note")) |nn| try out.print(": {s}", .{nn});
+                const nb = try blockedBy(c.a, &w, it.id);
+                if (nb > 0) try out.print(" · ferma {d} voci", .{nb});
+                try out.writeByte('\n');
+            }
             const opts = try splitOptions(c.a, O.fieldValue(it, "hold_options"));
             for (opts.items, 0..) |op, k| try out.print("     {d}) {s}\n", .{ k + 1, op });
             if (O.fieldValue(it, "hold_default")) |d| try out.print("     proposta: {s}\n", .{d});
         }
         return;
     }
-    try out.print("{{\"count\":{d},\"questions\":[", .{refs.len});
+    try out.print("{{\"count\":{d},\"{s}\":{d},\"questions\":[", .{ refs.len, if (o.deferred) "pending" else "deferred", if (o.deferred) cn.held else cn.deferred });
     for (refs, 0..) |r, i| {
         const it = W.item(&w, r).*;
         if (i > 0) try out.writeByte(',');
@@ -2101,6 +2194,15 @@ fn cmdQuestions(c: Ctx, o: *const Opts) !void {
             try O.jstr(out, op);
         }
         try out.writeByte(']');
+        if (O.fieldValue(it, "deferred")) |dd| {
+            try out.writeAll(",\"deferred\":");
+            try O.jstr(out, dd);
+            if (O.fieldValue(it, "defer_note")) |nn| {
+                try out.writeAll(",\"note\":");
+                try O.jstr(out, nn);
+            }
+            try out.print(",\"blocks\":{d}", .{try blockedBy(c.a, &w, it.id)});
+        }
         if (O.fieldValue(it, "hold_default")) |d| {
             try out.writeAll(",\"default\":");
             try O.jstr(out, d);
@@ -2167,6 +2269,7 @@ fn cmdReply(c: Ctx, o: *const Opts) !void {
     var ids: List = .empty;
     for (w0.steps) |st| for (st.items) |it| {
         if (it.done or O.fieldValue(it, "hold") == null) continue;
+        if (O.fieldValue(it, "deferred") != null and o.id == null) continue;
         if (o.id) |only| if (!std.mem.eql(u8, only, it.id)) continue;
         try ids.append(c.a, it.id);
     };
@@ -2320,7 +2423,7 @@ fn cmdBrief(c: Ctx, o: *const Opts) !void {
 
 // ------------------------------------------------------------ sessione automatica
 
-const Counters = struct { open: usize = 0, done: usize = 0, avail: usize = 0, blocked: usize = 0, held: usize = 0, claimed: usize = 0, delegable: usize = 0, answered: usize = 0 };
+const Counters = struct { open: usize = 0, done: usize = 0, avail: usize = 0, blocked: usize = 0, held: usize = 0, deferred: usize = 0, claimed: usize = 0, delegable: usize = 0, answered: usize = 0 };
 
 fn computeCounters(w: *const W.Work) Counters {
     var c: Counters = .{};
@@ -2332,13 +2435,16 @@ fn computeCounters(w: *const W.Work) Counters {
         c.open += 1;
         const cn = G.counts(w, it);
         const blk = cn.total - cn.done > 0;
-        const held = O.fieldValue(it, "hold") != null;
+        const on_hold = O.fieldValue(it, "hold") != null;
+        const dfr = on_hold and O.fieldValue(it, "deferred") != null;
+        const held = on_hold and !dfr;
         const claimed = O.fieldValue(it, "claimed_by") != null;
         if (blk) c.blocked += 1;
         if (held) c.held += 1;
+        if (dfr) c.deferred += 1;
         if (claimed) c.claimed += 1;
-        if (!held and O.fieldValue(it, "answer") != null) c.answered += 1;
-        if (!blk and !held and !claimed) {
+        if (!on_hold and O.fieldValue(it, "answer") != null) c.answered += 1;
+        if (!blk and !on_hold and !claimed) {
             c.avail += 1;
             if (O.fieldValue(it, "mode")) |m| if (std.ascii.eqlIgnoreCase(m, "isolated")) {
                 c.delegable += 1;
@@ -2397,7 +2503,7 @@ fn evalSession(cn: Counters, sess: Session) Eval {
     if (completed >= sess.limit) {
         reason = "limit_reached";
     } else if (cn.avail == 0) {
-        reason = if (cn.held > 0) (if (left > 0) "waiting_for_answers" else "ask_user") else "nothing_available";
+        reason = if (cn.held > 0) (if (left > 0) "waiting_for_answers" else "ask_user") else if (cn.deferred > 0) "only_deferred" else "nothing_available";
     }
     const cont = std.mem.eql(u8, reason, "ok") or std.mem.eql(u8, reason, "waiting_for_answers") or std.mem.eql(u8, reason, "ask_user");
     const hint: []const u8 = if (std.mem.eql(u8, reason, "ok"))
@@ -2408,6 +2514,8 @@ fn evalSession(cn: Counters, sess: Session) Eval {
         "non resta altro da fare: presenta ORA le domande in chat con lo strumento nativo (`wk questions`), registra con `wk reply ID \"risposta\" …` e riprendi (vedi `wk help auto`)"
     else if (std.mem.eql(u8, reason, "limit_reached"))
         "scrivi il resoconto e chiudi con `wk auto stop`"
+    else if (std.mem.eql(u8, reason, "only_deferred"))
+        "restano solo voci ferme per domande rimandate dall'utente (`wk questions --deferred`): non riproporle; scrivi il resoconto (elenca le rimandate e quante voci fermano) e chiudi con `wk auto stop`"
     else if (cn.held > 0)
         "wk questions"
     else if (cn.claimed > 0)
@@ -2430,10 +2538,10 @@ fn answeredIds(a: std.mem.Allocator, w: *const W.Work) ![]const []const u8 {
 fn printStatus(c: Ctx, o: *const Opts, w: *const W.Work, cn: Counters, sess: Session, ev: Eval, waited_s: ?i64) !void {
     const out = c.out;
     if (o.format == .text) {
-        try out.print("{s} ({s}): completate {d}/{d}, disponibili {d}, bloccate {d}, in attesa {d}, in carico {d}, risposte da riprendere {d}{s}{s}\n", .{ if (ev.cont) "continua" else "stop", ev.reason, ev.completed, sess.limit, cn.avail, cn.blocked, cn.held, cn.claimed, cn.answered, if (ev.hint.len > 0) " — " else "", ev.hint });
+        try out.print("{s} ({s}): completate {d}/{d}, disponibili {d}, bloccate {d}, in attesa {d}, rimandate {d}, in carico {d}, risposte da riprendere {d}{s}{s}\n", .{ if (ev.cont) "continua" else "stop", ev.reason, ev.completed, sess.limit, cn.avail, cn.blocked, cn.held, cn.deferred, cn.claimed, cn.answered, if (ev.hint.len > 0) " — " else "", ev.hint });
         return;
     }
-    try out.print("{{\"active\":true,\"continue\":{s},\"reason\":\"{s}\",\"completed\":{d},\"limit\":{d},\"remaining\":{d},\"available\":{d},\"blocked\":{d},\"held\":{d},\"claimed\":{d},\"delegate\":{s},\"delegable\":{d},\"answered\":{d},\"answered_ids\":[", .{ if (ev.cont) "true" else "false", ev.reason, ev.completed, sess.limit, sess.limit - ev.completed, cn.avail, cn.blocked, cn.held, cn.claimed, if (sess.delegate) "true" else "false", cn.delegable, cn.answered });
+    try out.print("{{\"active\":true,\"continue\":{s},\"reason\":\"{s}\",\"completed\":{d},\"limit\":{d},\"remaining\":{d},\"available\":{d},\"blocked\":{d},\"held\":{d},\"deferred\":{d},\"claimed\":{d},\"delegate\":{s},\"delegable\":{d},\"answered\":{d},\"answered_ids\":[", .{ if (ev.cont) "true" else "false", ev.reason, ev.completed, sess.limit, sess.limit - ev.completed, cn.avail, cn.blocked, cn.held, cn.deferred, cn.claimed, if (sess.delegate) "true" else "false", cn.delegable, cn.answered });
     const ids = try answeredIds(c.a, w);
     for (ids[0..@min(10, ids.len)], 0..) |id, i| {
         if (i > 0) try out.writeByte(',');
@@ -2550,7 +2658,7 @@ fn cmdAuto(c: Ctx, o: *const Opts) !u8 {
 fn helpFor(cmd: []const u8) ?[]const u8 {
     const m = std.StaticStringMap([]const u8).initComptime(.{
         .{ "list", H.cmd_list },       .{ "get", H.cmd_get },         .{ "next", H.cmd_next },
-        .{ "steps", H.cmd_steps },     .{ "tags", H.cmd_tags }, .{ "keys", H.cmd_keys }, .{ "classify", H.cmd_classify }, .{ "hold", H.cmd_hold }, .{ "resolve", H.cmd_hold }, .{ "questions", H.cmd_hold }, .{ "reply", H.cmd_reply }, .{ "claim", H.cmd_claim }, .{ "unclaim", H.cmd_claim }, .{ "brief", H.cmd_brief }, .{ "auto", H.auto }, .{ "version", H.cmd_version }, .{ "migrate", H.cmd_migrate }, .{ "dep", H.cmd_dep }, .{ "deps", H.cmd_deps }, .{ "waves", H.cmd_waves }, .{ "section", H.cmd_section }, .{ "plan", H.cmd_plan }, .{ "hook", H.cmd_hook }, .{ "step-set", H.cmd_step_set }, .{ "delegation", H.delegation }, .{ "output", H.output },       .{ "add", H.cmd_add },
+        .{ "steps", H.cmd_steps },     .{ "tags", H.cmd_tags }, .{ "keys", H.cmd_keys }, .{ "classify", H.cmd_classify }, .{ "hold", H.cmd_hold }, .{ "defer", H.cmd_hold }, .{ "undefer", H.cmd_hold }, .{ "resolve", H.cmd_hold }, .{ "questions", H.cmd_hold }, .{ "reply", H.cmd_reply }, .{ "claim", H.cmd_claim }, .{ "unclaim", H.cmd_claim }, .{ "brief", H.cmd_brief }, .{ "auto", H.auto }, .{ "version", H.cmd_version }, .{ "migrate", H.cmd_migrate }, .{ "dep", H.cmd_dep }, .{ "deps", H.cmd_deps }, .{ "waves", H.cmd_waves }, .{ "section", H.cmd_section }, .{ "plan", H.cmd_plan }, .{ "hook", H.cmd_hook }, .{ "step-set", H.cmd_step_set }, .{ "delegation", H.delegation }, .{ "output", H.output },       .{ "add", H.cmd_add },
         .{ "check", H.cmd_check },     .{ "uncheck", H.cmd_check },   .{ "edit", H.cmd_edit },
         .{ "set", H.cmd_set },         .{ "unset", H.cmd_set },       .{ "tag", H.cmd_tag },
         .{ "rm", H.cmd_rm },           .{ "assign-ids", H.cmd_assign }, .{ "validate", H.cmd_validate },
@@ -2610,6 +2718,8 @@ fn run(c: Ctx, args: []const []const u8) !u8 {
     else if (eq(u8, cmd, "sync")) try cmdSync(c, &o)
     else if (eq(u8, cmd, "classify")) try cmdClassify(c, &o)
     else if (eq(u8, cmd, "hold")) try cmdHold(c, &o)
+    else if (eq(u8, cmd, "defer")) try cmdDefer(c, &o)
+    else if (eq(u8, cmd, "undefer")) try cmdUndefer(c, &o)
     else if (eq(u8, cmd, "resolve")) try cmdResolve(c, &o)
     else if (eq(u8, cmd, "questions")) try cmdQuestions(c, &o)
     else if (eq(u8, cmd, "reply")) try cmdReply(c, &o)
@@ -2676,4 +2786,13 @@ test {
     _ = @import("graph.zig");
     _ = F;
     _ = @import("section.zig");
+}
+
+test "isPostponeText riconosce i rinvii e non le risposte normali" {
+    try std.testing.expect(isPostponeText("Rimanda"));
+    try std.testing.expect(isPostponeText("Non ancora: rimanda staging"));
+    try std.testing.expect(isPostponeText("Ne riparliamo più tardi"));
+    try std.testing.expect(!isPostponeText("Rimane com'è"));
+    try std.testing.expect(!isPostponeText("Stessa macchina"));
+    try std.testing.expect(!isPostponeText("Differente da prima"));
 }

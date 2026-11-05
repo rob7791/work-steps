@@ -85,3 +85,9 @@ L'agente si accorge delle risposte da `wk auto status`/`wk steps` (`answered`) e
 risposte. Quando non resta altro da fare e mancano solo risposte, `wk auto status` dà `ask_user`: l'agente le presenta
 in chat con lo strumento nativo del suo CLI e riprende. `wk auto start --wait MINUTI` + `wk auto wait` sono opzionali:
 attendono prima le risposte dalla dashboard, poi si chiede in chat.
+
+L'utente può **rimandare** una domanda (pulsante "Rimanda" della dashboard, con una nota facoltativa su cosa aspetta):
+`wk defer ID [--note …]` la toglie dalla coda senza toccarne il testo, `wk undefer ID` la rimette in coda,
+`wk questions --deferred` le elenca con la nota e quante voci fermano. La voce e quelle che ne dipendono restano ferme;
+se restano solo quelle, `wk auto status` dà `only_deferred` (stop, senza riproporre le domande). `wk hold` rifiuta
+opzioni che sono un rinvio ("Rimanda", "Non ancora"…): rinviare non è una risposta.

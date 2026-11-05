@@ -479,7 +479,10 @@ pub const cmd_migrate =
 pub const cmd_hold =
     \\wk hold ID "domanda" [--option X --option Y …] [--default X]   mette la voce in attesa di una decisione
     \\wk resolve ID "risposta"      toglie l'attesa e registra domanda (`asked`) e risposta (`answer`, `answered_at`)
-    \\wk questions [filtri]         voci in attesa: {"count","questions":[{"id","step","label","question","options":[],"default"?}]}
+    \\wk questions [filtri]         domande da rispondere: {"count","deferred":N,"questions":[{"id","step","label","question","options":[],"default"?}]}
+    \\wk questions --deferred       le domande rimandate dall'utente (con "deferred", "note"?, "blocks"); non sono da riproporre
+    \\wk defer ID [--note "cosa si aspetta"]   l'UTENTE rimanda la risposta: la domanda resta intatta ed esce dalla coda
+    \\wk undefer ID                 rimette la domanda tra quelle da rispondere
     \\
     \\Usalo quando una voce richiede una scelta, un'informazione o un'autorizzazione che l'agente non ha:
     \\mettila in attesa e passa oltre, SENZA fermarti a chiedere in chat finché c'è altro lavoro. L'utente vede le
@@ -488,6 +491,13 @@ pub const cmd_hold =
     \\Se non resta altro da fare, l'agente le presenta in chat (`wk auto status` → "ask_user"); fino ad allora si accumulano.
     \\--option (almeno due) offre risposte a scelta; --default è la proposta che l'utente può accettare in un clic.
     \\`next` e `--delegable` saltano le voci in attesa; la risposta le rende di nuovo disponibili.
+    \\
+    \\Rimandare: spetta all'utente (pulsante "Rimanda" della dashboard, oppure te lo dice in chat). Allora esegui
+    \\`wk defer ID --note "cosa si aspetta"` e basta: non riscrivere la domanda, non annotare il rinvio nel testo,
+    \\non riproporla in chat. Una domanda rimandata ferma la voce e quelle che ne dipendono, ma non fa fermare
+    \\la modalità automatica né compare tra le domande da rispondere: nel resoconto elencala (`wk questions --deferred`).
+    \\NON mettere mai "Rimanda", "Non ancora", "più tardi" tra le --option né come --default: `wk hold` le rifiuta.
+    \\`wk hold` su una voce rimandata la riporta tra le domande da rispondere (nuova domanda); rispondere o `wk check` chiudono il rinvio.
     \\
     \\  wk hold k3f9 "Il target è 2.4.8-p5 o p4? Cambia la matrice di compatibilità" --option 2.4.8-p5 --option 2.4.8-p4 --default 2.4.8-p5
     \\
@@ -550,8 +560,8 @@ pub const auto =
     \\  wk auto start --limit N [--delegate] [--wait MINUTI]   registra la sessione nell'entrypoint (campo "Sessione automatica").
     \\                              --wait = minuti di attesa di risposte DALLA DASHBOARD prima di chiedere in chat (default 0:
     \\                              si chiede in chat appena non resta altro)
-    \\  wk auto status              {"continue":bool,"reason":"ok|waiting_for_answers|ask_user|nothing_available|limit_reached",
-    \\                              "completed","limit","available","held","delegate","delegable","answered","answered_ids","wait_left_s","hint"}
+    \\  wk auto status              {"continue":bool,"reason":"ok|waiting_for_answers|ask_user|only_deferred|nothing_available|limit_reached",
+    \\                              "completed","limit","available","held","deferred","delegate","delegable","answered","answered_ids","wait_left_s","hint"}
     \\  wk auto wait --timeout S    attende (polling, default 60 s) risposte dalla dashboard; consuma il budget --wait
     \\  wk auto stop                chiude la sessione: {"stopped":true,"completed":N}. Rifiutato se `wk auto status` dà
     \\                              "continue": true (nessuna condizione di stop); `--force` solo su richiesta dell'utente di
@@ -601,13 +611,15 @@ pub const auto =
     \\  degli ID se una risposta inizia con '-'). Se `wk reply` segnala che una voce ha già una risposta (l'utente ha
     \\  risposto nel frattempo dalla dashboard) non è un errore: rileggi `wk questions` e prosegui.
     \\  Quindi riprendi dal punto 1 del ciclo (`wk auto status` → `wk next`).
-    \\  Se l'utente rimanda o non risponde, non riproporre le stesse domande: è uno stop (nothing_available con
-    \\  domande aperte), riportalo nel resoconto.
+    \\  Se l'utente rimanda una domanda (te lo dice in chat, o lo fa dalla dashboard): `wk defer ID --note "cosa si aspetta"`,
+    \\  senza riscrivere la domanda né mettere "Rimanda" tra le opzioni. Se non risponde e non rimanda, non riproporla:
+    \\  è uno stop (nothing_available), riportalo nel resoconto.
     \\
     \\Condizioni di stop (tutte e sole)
-    \\  a. `wk auto status` → "continue": false con reason "nothing_available" o "limit_reached".
+    \\  a. `wk auto status` → "continue": false con reason "only_deferred", "nothing_available" o "limit_reached".
     \\     ("waiting_for_answers" e "ask_user" NON sono stop: si attende la dashboard entro il budget --wait, poi si
-    \\     chiede in chat.) Se l'utente rimanda le domande, lo stop è "nothing_available".
+    \\     chiede in chat.) "only_deferred": restano solo voci ferme per domande che l'utente ha rimandato
+    \\     (`wk questions --deferred`): non riproporle in chat, nel resoconto elencale con quante voci fermano ("blocks").
     \\  b. Errore bloccante dell'ambiente o del tool che non sai aggirare.
     \\  Non sono condizioni di stop: un risultato parziale buono, "aver fatto abbastanza", la lunghezza della
     \\  conversazione, voci ancora disponibili con limite non raggiunto, domande in attesa (si parcheggiano e si va

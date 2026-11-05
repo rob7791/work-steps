@@ -60,6 +60,12 @@ h2.t{font-size:26px;margin:0 0 4px}
 .mb{font-size:11.5px;margin-left:8px;padding:0 7px;border-radius:99px;white-space:nowrap;cursor:default}
 .mb.isolated{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
 .mb.integrated{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.df{font-size:11.5px;margin-left:8px;padding:0 7px;border-radius:99px;background:var(--faint);color:var(--mute);white-space:nowrap}
+.qdh{margin:26px 0 4px;font-size:13px;font-weight:600;color:var(--mute);letter-spacing:.02em}
+.qc.dfr .qq{color:var(--mute)}.qm{color:var(--mute);font-size:12.5px;margin-top:6px}
+.qd{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.qd[hidden]{display:none}
+.qd input{flex:1;min-width:200px;border:0;border-radius:8px;background:var(--faint);color:inherit;font:inherit;font-size:14px;padding:8px 12px;outline:none}
+.qd input:focus{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}.qd .go{background:var(--accent);color:#fff}
 .hd{font-size:11.5px;margin-left:8px;padding:0 7px;border-radius:99px;background:color-mix(in srgb,var(--block) 14%,transparent);color:var(--block);white-space:nowrap;cursor:help}
 .cl{font-size:11.5px;margin-left:8px;padding:0 7px;border-radius:99px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);white-space:nowrap}
 .dp{font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace;margin-left:8px;color:var(--mute);cursor:pointer;white-space:nowrap}
@@ -365,7 +371,7 @@ function renderMain(){
   const q = query.trim().toLowerCase(), filtering = !!q || tagSel.size > 0 || (hasGraph && (stateF !== 'all' || modeF !== 'all'));
   const match = i => (!onlyOpen || !i.done)
     && [...tagSel].every(t => (i.tags||[]).some(x => x.toLowerCase() === t))
-    && (!hasGraph || ((stateF === 'all' || (stateF === 'ready' && !i.done && !openDeps(i).length) || (stateF === 'blocked' && !i.done && openDeps(i).length > 0) || (stateF === 'delegable' && !i.done && !openDeps(i).length && fieldOf(i, 'mode') === 'isolated' && !fieldOf(i, 'hold') && !fieldOf(i, 'claimed_by')) || (stateF === 'held' && !i.done && fieldOf(i, 'hold')) || (stateF === 'claimed' && !i.done && fieldOf(i, 'claimed_by')))
+    && (!hasGraph || ((stateF === 'all' || (stateF === 'ready' && !i.done && !openDeps(i).length) || (stateF === 'blocked' && !i.done && openDeps(i).length > 0) || (stateF === 'delegable' && !i.done && !openDeps(i).length && fieldOf(i, 'mode') === 'isolated' && !fieldOf(i, 'hold') && !fieldOf(i, 'claimed_by')) || (stateF === 'held' && !i.done && fieldOf(i, 'hold') && !fieldOf(i, 'deferred')) || (stateF === 'deferred' && !i.done && fieldOf(i, 'deferred')) || (stateF === 'claimed' && !i.done && fieldOf(i, 'claimed_by')))
       && (modeF === 'all' || (modeF === 'unset' ? !fieldOf(i, 'mode') : fieldOf(i, 'mode') === modeF))))
     && (!q || [i.id, i.text, ...(i.tags||[]), ...(i.deps||[]), ...(i.fields||[]).map(f => f.key + ' ' + f.value)].join(' ').toLowerCase().includes(q));
   let found = 0;
@@ -377,7 +383,7 @@ function renderMain(){
     const title = s.title.replace(/^Step\s+\d+\s*[—-]\s*/i, '');
     const items = s.groups.map(g => { const vis = g.items.map((i, n) => ({ i, n })).filter(x => match(x.i)); return vis.length ? (g.name ? `<div class="grp">${esc(g.name)}</div>` : '') + vis.map(({ i, n }) => {
       const k = key + '#' + g.name + n;
-      return `<div class="it ${i.done?'done':''} ${!i.done && openDeps(i).length ? 'blk' : ''}" style="${i.level?'margin-left:22px':''}"><span class="ck"></span>${i.id?`<span class="id" data-id="${esc(i.id)}" title="Clicca per copiare">${esc(i.id)}</span>`:''}<span class="tx">${inline(i.text)}${(i.tags||[]).map(t => `<span class="tg ${tagSel.has(t.toLowerCase())?'on':''}" data-tag="${esc(t.toLowerCase())}">${esc(t)}</span>`).join('')}${fieldOf(i, 'mode') ? `<span class="mb ${esc(fieldOf(i, 'mode'))}" title="${esc(fieldOf(i, 'mode_reason') || '')}">${fieldOf(i, 'mode') === 'isolated' ? 'isolata' : 'integrata'}</span>` : ''}${fieldOf(i, 'hold') ? `<span class="hd" data-qopen="${esc(i.id)}" style="cursor:pointer" title="${esc(fieldOf(i, 'hold'))}">in attesa · rispondi</span>` : ''}${!i.done && !fieldOf(i, 'hold') && fieldOf(i, 'answer') ? `<span class="rs" title="Risposta: ${esc(fieldOf(i, 'answer'))}">risposta ricevuta</span>` : ''}${fieldOf(i, 'claimed_by') ? `<span class="cl">in carico: ${esc(fieldOf(i, 'claimed_by'))}</span>` : ''}${(i.deps||[]).map(d => `<span class="dp ${byId.get(d)?.done ? 'ok' : ''}" data-q="${esc(d)}" title="${esc(byId.get(d)?.text || 'voce non trovata')}">↳ ${esc(d)}</span>`).join('')}${!i.done && openDeps(i).length ? '<span class="bk">bloccata</span>' : ''}${(i.fields||[]).filter(f => !/^(mode|mode_reason|deps_reason|hold|hold_options|hold_default|answer|asked|answered_at|claimed_by)$/i.test(f.key)).map(f => `<span class="kv">${esc(f.key)}: <b>${esc(f.value)}</b></span>`).join('')}</span>${i.note?`<button class="nb" data-note="${esc(k)}">nota</button>`:''}</div>${i.note?`<div class="inote fx ${openNotes.has(k)?'show':''}" id="n-${esc(k)}">${md(i.note)}</div>`:''}`;
+      return `<div class="it ${i.done?'done':''} ${!i.done && openDeps(i).length ? 'blk' : ''}" style="${i.level?'margin-left:22px':''}"><span class="ck"></span>${i.id?`<span class="id" data-id="${esc(i.id)}" title="Clicca per copiare">${esc(i.id)}</span>`:''}<span class="tx">${inline(i.text)}${(i.tags||[]).map(t => `<span class="tg ${tagSel.has(t.toLowerCase())?'on':''}" data-tag="${esc(t.toLowerCase())}">${esc(t)}</span>`).join('')}${fieldOf(i, 'mode') ? `<span class="mb ${esc(fieldOf(i, 'mode'))}" title="${esc(fieldOf(i, 'mode_reason') || '')}">${fieldOf(i, 'mode') === 'isolated' ? 'isolata' : 'integrata'}</span>` : ''}${fieldOf(i, 'hold') && !fieldOf(i, 'deferred') ? `<span class="hd" data-qopen="${esc(i.id)}" style="cursor:pointer" title="${esc(fieldOf(i, 'hold'))}">in attesa · rispondi</span>` : ''}${fieldOf(i, 'hold') && fieldOf(i, 'deferred') ? `<span class="df" data-qopen="${esc(i.id)}" style="cursor:pointer" title="${esc(fieldOf(i, 'hold'))}">rimandata il ${esc(fieldOf(i, 'deferred'))}${fieldOf(i, 'defer_note') ? ' · ' + esc(fieldOf(i, 'defer_note')) : ''}</span>` : ''}${!i.done && !fieldOf(i, 'hold') && fieldOf(i, 'answer') ? `<span class="rs" title="Risposta: ${esc(fieldOf(i, 'answer'))}">risposta ricevuta</span>` : ''}${fieldOf(i, 'claimed_by') ? `<span class="cl">in carico: ${esc(fieldOf(i, 'claimed_by'))}</span>` : ''}${(i.deps||[]).map(d => `<span class="dp ${byId.get(d)?.done ? 'ok' : ''}" data-q="${esc(d)}" title="${esc(byId.get(d)?.text || 'voce non trovata')}">↳ ${esc(d)}</span>`).join('')}${!i.done && openDeps(i).length ? '<span class="bk">bloccata</span>' : ''}${(i.fields||[]).filter(f => !/^(mode|mode_reason|deps_reason|hold|hold_options|hold_default|deferred|defer_note|answer|asked|answered_at|claimed_by)$/i.test(f.key)).map(f => `<span class="kv">${esc(f.key)}: <b>${esc(f.value)}</b></span>`).join('')}</span>${i.note?`<button class="nb" data-note="${esc(k)}">nota</button>`:''}</div>${i.note?`<div class="inote fx ${openNotes.has(k)?'show':''}" id="n-${esc(k)}">${md(i.note)}</div>`:''}`;
     }).join('') : ''; }).join('');
     const notes = s.notes.filter(n => !/^(obiettivo)$/i.test(n.title)).map(n => `<details class="n" ${openNotes.has(key+n.title)?'open':''} data-nk="${esc(key+n.title)}"><summary>${esc(n.title)}</summary>${md(n.body)}</details>`).join('');
     const obj = s.notes.find(n => /^obiettivo$/i.test(n.title));
@@ -388,7 +394,7 @@ function renderMain(){
   const upd = w.mtime ? new Date(w.mtime).toLocaleString('it-IT') : '';
   const scroll = scrollY, af = document.activeElement, hadQ = af && af.id === 'q', pos = hadQ ? af.selectionStart : 0;
   const chips = tagCount.size ? `<div class="chips">${[...tagCount].sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0])).map(([k, e]) => `<button class="tc ${tagSel.has(k)?'on':''}" data-tag="${esc(k)}">${esc(e.name)}<small>${e.n}</small></button>`).join('')}</div>` : '';
-  const toolbar = `<div class="bar2"><input id="q" type="search" placeholder="Cerca testo o codice…  ( / )" value="${esc(query)}" autocomplete="off"><label class="flt"><input type="checkbox" id="flt" ${onlyOpen?'checked':''}> Solo voci aperte</label>${hasGraph?`<select class="sel" id="sf" title="Stato rispetto alle dipendenze"><option value="all">Tutte</option><option value="ready" ${stateF==='ready'?'selected':''}>Pronte</option><option value="blocked" ${stateF==='blocked'?'selected':''}>Bloccate</option><option value="delegable" ${stateF==='delegable'?'selected':''}>Delegabili</option><option value="held" ${stateF==='held'?'selected':''}>In attesa</option><option value="claimed" ${stateF==='claimed'?'selected':''}>In carico</option></select><select class="sel" id="mf" title="Classificazione"><option value="all">Ogni modalità</option><option value="isolated" ${modeF==='isolated'?'selected':''}>Isolate</option><option value="integrated" ${modeF==='integrated'?'selected':''}>Integrate</option><option value="unset" ${modeF==='unset'?'selected':''}>Non classificate</option></select>`:''}${filtering?`<span class="res">${found} ${found===1?'voce':'voci'}</span><button class="lnk" id="clr">azzera</button>`:''}</div>${chips}`;
+  const toolbar = `<div class="bar2"><input id="q" type="search" placeholder="Cerca testo o codice…  ( / )" value="${esc(query)}" autocomplete="off"><label class="flt"><input type="checkbox" id="flt" ${onlyOpen?'checked':''}> Solo voci aperte</label>${hasGraph?`<select class="sel" id="sf" title="Stato rispetto alle dipendenze"><option value="all">Tutte</option><option value="ready" ${stateF==='ready'?'selected':''}>Pronte</option><option value="blocked" ${stateF==='blocked'?'selected':''}>Bloccate</option><option value="delegable" ${stateF==='delegable'?'selected':''}>Delegabili</option><option value="held" ${stateF==='held'?'selected':''}>In attesa</option><option value="deferred" ${stateF==='deferred'?'selected':''}>Rimandate</option><option value="claimed" ${stateF==='claimed'?'selected':''}>In carico</option></select><select class="sel" id="mf" title="Classificazione"><option value="all">Ogni modalità</option><option value="isolated" ${modeF==='isolated'?'selected':''}>Isolate</option><option value="integrated" ${modeF==='integrated'?'selected':''}>Integrate</option><option value="unset" ${modeF==='unset'?'selected':''}>Non classificate</option></select>`:''}${filtering?`<span class="res">${found} ${found===1?'voce':'voci'}</span><button class="lnk" id="clr">azzera</button>`:''}</div>${chips}`;
   $('#main').innerHTML = `<div class="hrow"><h2 class="t">${esc(w.title)}</h2><div class="docs">${w.docs?.plan ? '<button class="db" data-open="plan">Piano</button>' : ''}${w.docs?.entrypoint ? '<button class="db" data-open="entrypoint">Entrypoint</button>' : ''}<button class="db qb ${pendingQ(w).length ? 'hot' : ''}" data-qopen="">Domande${pendingQ(w).length ? ' (' + pendingQ(w).length + ')' : ''}</button></div></div><div class="sub">${w.done} di ${w.total} voci completate · ${pct(w.done,w.total)}%${upd?' · aggiornato '+upd:''}<div style="max-width:320px">${bar(w.done,w.total)}</div></div>${toolbar}${nowHtml}${steps}${filtering && !found ? '<div class="empty" style="margin-top:12vh">Nessuna voce corrisponde ai filtri.</div>' : ''}`;
   scrollTo(0, scroll);
   if (hadQ) { const el = $('#q'); el.focus(); el.setSelectionRange(pos, pos); }
@@ -465,28 +471,44 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#docv'
 
 // --- domande in attesa: risposte dalla dashboard (registrate con `wk reply`) ---
 const fld = (i, k) => (i.fields || []).find(f => f.key.toLowerCase() === k)?.value;
-const pendingQ = w => w.steps.flatMap(s => s.groups.flatMap(g => g.items.filter(i => !i.done && fld(i, 'hold')).map(i => ({ i, s }))));
+const pendingQ = w => w.steps.flatMap(s => s.groups.flatMap(g => g.items.filter(i => !i.done && fld(i, 'hold') && !fld(i, 'deferred')).map(i => ({ i, s }))));
+const deferredQ = w => w.steps.flatMap(s => s.groups.flatMap(g => g.items.filter(i => !i.done && fld(i, 'hold') && fld(i, 'deferred')).map(i => ({ i, s }))));
+function blocksN(w, id) { // voci aperte ferme (anche indirettamente) finché id non è chiusa
+  const all = w.steps.flatMap(s => s.groups.flatMap(g => g.items)), seen = new Set(), q = [id];
+  while (q.length) { const cur = q.shift(); for (const x of all) if (!x.done && x.id && !seen.has(x.id) && (x.deps || []).includes(cur)) { seen.add(x.id); q.push(x.id); } }
+  return seen.size;
+}
 let qOpen = false, qSeen = new Set(), qInit = false, qNew = new Set(), qSig = '', qDraft = {};
 let qNotif = store.get('qNotif', false);
 function paintQ(force) {
   const w = curWork(), list = $('#q-list'); if (!w) return;
-  const items = pendingQ(w);
-  const sig = w.id + '|' + items.map(x => x.i.id + fld(x.i, 'hold') + (fld(x.i, 'hold_options') || '')).join('§');
+  const items = pendingQ(w), dfr = deferredQ(w);
+  const sig = w.id + '|' + items.map(x => x.i.id + fld(x.i, 'hold') + (fld(x.i, 'hold_options') || '')).join('§') + '¦' + dfr.map(x => x.i.id + fld(x.i, 'deferred') + (fld(x.i, 'defer_note') || '')).join('§');
   $('#qv-title').textContent = items.length ? `Domande in attesa · ${items.length}` : 'Domande in attesa';
   $('#qv-notif').textContent = 'Avvisi: ' + (qNotif && Notification.permission === 'granted' ? 'sì' : 'no');
   if (!force && sig === qSig) return;
   qSig = sig;
   const info = `<p class="q-info">L'agente continua a lavorare sulle altre voci: appena rispondi, la voce torna disponibile e la riprende da sola.</p>`;
-  if (!items.length) { list.innerHTML = info + '<div class="sub">Nessuna domanda in attesa.</div>'; return; }
+  const dHtml = dfr.length ? `<div class="qdh">Rimandate · ${dfr.length}</div>` + dfr.map(({ i, s }) => {
+    const n = blocksN(w, i.id);
+    return `<div class="qc dfr" data-qid="${esc(i.id)}">
+      <div class="qh"><span class="id">${esc(i.id)}</span><span class="fx">${esc(s.title.replace(/^Step\s+\d+\s*[—-]\s*/i, ''))} · ${inline(i.text)}</span></div>
+      <div class="qq fx">${inl(fld(i, 'hold'))}</div>
+      <div class="qm">Rimandata il ${esc(fld(i, 'deferred'))}${fld(i, 'defer_note') ? ' · ' + esc(fld(i, 'defer_note')) : ''}${n ? ` · ferma ${n} ${n === 1 ? 'voce' : 'voci'}` : ''}</div>
+      <div class="qa"><input type="text" placeholder="Rispondi ora…" value="${esc(qDraft[i.id] || '')}" data-qin="${esc(i.id)}"><button class="db go" data-qsend>Invia</button><button class="db" data-qundefer>Riporta in coda</button></div>
+      <div class="qe" hidden></div></div>`;
+  }).join('') : '';
+  if (!items.length) { list.innerHTML = info + '<div class="sub">Nessuna domanda da rispondere.</div>' + dHtml; return; }
   list.innerHTML = info + items.map(({ i, s }) => {
     const opts = (fld(i, 'hold_options') || '').split(' | ').map(x => x.trim()).filter(Boolean), def = fld(i, 'hold_default');
     return `<div class="qc ${qNew.has(i.id) ? 'new' : ''}" data-qid="${esc(i.id)}">
       <div class="qh"><span class="id">${esc(i.id)}</span><span class="fx">${esc(s.title.replace(/^Step\s+\d+\s*[—-]\s*/i, ''))} · ${inline(i.text)}</span></div>
       <div class="qq fx">${inl(fld(i, 'hold'))}</div>
       ${opts.length ? `<div class="qo">${opts.map(o => `<button class="opt ${def === o ? 'def' : ''}" data-qopt="${esc(o)}">${esc(o)}${def === o ? ' · proposta' : ''}</button>`).join('')}</div>` : ''}
-      <div class="qa"><input type="text" placeholder="${opts.length ? 'Oppure scrivi un’altra risposta…' : 'Scrivi la risposta…'}" value="${esc(qDraft[i.id] || '')}" data-qin="${esc(i.id)}"><button class="db go" data-qsend>Invia</button>${def && !opts.length ? `<button class="db" data-qopt="${esc(def)}">Usa la proposta: ${esc(def)}</button>` : ''}</div>
+      <div class="qa"><input type="text" placeholder="${opts.length ? 'Oppure scrivi un’altra risposta…' : 'Scrivi la risposta…'}" value="${esc(qDraft[i.id] || '')}" data-qin="${esc(i.id)}"><button class="db go" data-qsend>Invia</button>${def && !opts.length ? `<button class="db" data-qopt="${esc(def)}">Usa la proposta: ${esc(def)}</button>` : ''}<button class="db" data-qdefer title="Toglie la domanda dalla coda senza rispondere">Rimanda</button></div>
+      <div class="qd" hidden><input type="text" placeholder="Cosa aspetti? (facoltativo)" data-qnote="${esc(i.id)}"><button class="db go" data-qdefer-ok>Conferma rinvio</button></div>
       <div class="qe" hidden></div></div>`;
-  }).join('');
+  }).join('') + dHtml;
 }
 function openQ(focusId) {
   qOpen = true; qNew.clear(); $('#qv').hidden = false; paintQ(true);
@@ -502,6 +524,16 @@ async function sendAnswer(card, answer) {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || r.status);
     delete qDraft[id]; await load();
+  } catch (e) { card.classList.remove('sent'); err.textContent = 'Non registrata: ' + e.message; err.hidden = false; }
+}
+async function postQ(card, path, extra) {
+  const id = card.dataset.qid, err = card.querySelector('.qe');
+  card.classList.add('sent'); err.hidden = true;
+  try {
+    const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ work: curWork().id, id, ...extra }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.status);
+    await load();
   } catch (e) { card.classList.remove('sent'); err.textContent = 'Non registrata: ' + e.message; err.hidden = false; }
 }
 function checkNewQuestions() {
@@ -527,10 +559,14 @@ document.addEventListener('click', e => {
     return;
   }
   const opt = e.target.closest('#qv [data-qopt]'); if (opt) { sendAnswer(opt.closest('.qc'), opt.dataset.qopt); return; }
+  const dfb = e.target.closest('#qv [data-qdefer]'); if (dfb) { const r = dfb.closest('.qc').querySelector('.qd'); r.hidden = !r.hidden; if (!r.hidden) r.querySelector('input').focus(); return; }
+  const dfo = e.target.closest('#qv [data-qdefer-ok]'); if (dfo) { const c = dfo.closest('.qc'); postQ(c, '/api/defer', { note: c.querySelector('[data-qnote]').value }); return; }
+  const und = e.target.closest('#qv [data-qundefer]'); if (und) { postQ(und.closest('.qc'), '/api/undefer', {}); return; }
   const snd = e.target.closest('#qv [data-qsend]'); if (snd) { const c = snd.closest('.qc'); sendAnswer(c, c.querySelector('input').value); }
 }, true);
 document.addEventListener('input', e => { const i = e.target.dataset?.qin; if (i) qDraft[i] = e.target.value; });
 document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.dataset?.qnote !== undefined) { e.preventDefault(); e.target.closest('.qc').querySelector('[data-qdefer-ok]').click(); return; }
   if (e.key === 'Enter' && e.target.dataset?.qin) { e.preventDefault(); sendAnswer(e.target.closest('.qc'), e.target.value); }
   if (e.key === 'Escape' && qOpen) closeQ();
 });
