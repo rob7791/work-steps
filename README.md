@@ -35,3 +35,7 @@ Il repository è anche un plugin (`work-steps`): skill `wk` + binario + due hook
     lavoro, `wk auto stop --force` e tre richiami senza progressi lo lasciano fermare.
 - Per provarlo senza installare: `claude --plugin-dir ~/workspace/step-harness`. Verifica: `claude plugin validate .`.
 - Windows: il binario si compila, ma senza lock tra scritture concorrenti (`wk` in parallelo da più sottoagenti).
+
+## Licenza
+
+MIT, vedi [LICENSE](LICENSE).
