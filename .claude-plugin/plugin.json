@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "description": "Work a checklist per agenti: la CLI `wk` (voci, dipendenze, deleghe, modalità automatica, domande) e la skill per usarla senza editare a mano i markdown.",
   "author": {
-    "name": "purelab"
+    "name": "Roberto Annunziatella"
   },
   "keywords": [
     "checklist",
