@@ -50,6 +50,8 @@ pub const main =
     \\  --format json|text|ids   Default json (compatto, una riga). `ids` = un ID per riga.
     \\  --brief          Solo id, done, label.
     \\  --full           Valori lunghi per intero (di norma sopra 300 car. sono accorciati, con l'indicazione di come leggerli).
+    \\                   Sulle scritture (check, set, hold, classify…) stampa anche la voce aggiornata: di norma rispondono solo
+    \\                   {"ok":true,"updated":[ID…]} (text: `ok ID…`), perché l'agente sa già cosa ha scritto. `add` stampa sempre la voce creata (serve l'ID).
     \\  --fields a,b,c   Solo questi campi (id,done,label,step,step_title,group,tags,fields,notes
     \\                   oppure chiavi personalizzate come `owner`, null se assenti).
     \\  --no-sync        Con check/uncheck/add/rm: non aggiornare entrypoint e Stato degli step.

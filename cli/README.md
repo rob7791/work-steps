@@ -53,6 +53,8 @@ Il tool sposta la lettura dai documenti ai comandi, e tiene piccoli sia l'output
   sposta il resto in `entrypoint-archive.md`, da non leggere) e il plan si legge a sezioni (`wk plan`, `wk plan "titolo"`).
 - Nella vista predefinita i valori oltre 300 caratteri sono accorciati con `[+N car.: wk get ID --fields chiave]`
   (`answer`, `hold` e le opzioni mai); `--fields chiave` o `--full` danno il testo intero.
+- Le scritture (`check`, `set`, `hold`, `classify`…) rispondono solo `{"ok":true,"updated":[ID…]}`; `--full` stampa anche
+  la voce aggiornata. `add` stampa sempre la voce creata.
 - Testi scritti: max 400 caratteri per campo (`set`, `add --set`, `check --result`), 240 per le etichette, 700 per
   le domande; `--long` salta il limite. `wk validate` avvisa se entrypoint > 4 KB, plan > 16 KB o ci sono campi lunghi.
 

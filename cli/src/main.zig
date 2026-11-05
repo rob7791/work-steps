@@ -758,7 +758,27 @@ fn cmdKeys(c: Ctx, o: *const Opts) !void {
     try c.out.writeAll("]}\n");
 }
 
+/// Risposta di una scrittura: di default solo l'esito (l'agente sa già cosa ha scritto); `--full`, `--fields` o `--brief` stampano le voci.
 fn printUpdated(c: Ctx, w: *const W.Work, ids: []const []const u8, o: *const Opts) !void {
+    if (!o.full and o.fields == null and !o.brief) {
+        switch (o.format) {
+            .ids => for (ids) |id| try c.out.print("{s}\n", .{id}),
+            .text => {
+                try c.out.writeAll("ok");
+                for (ids) |id| try c.out.print(" {s}", .{id});
+                try c.out.writeByte('\n');
+            },
+            else => {
+                try c.out.writeAll("{\"ok\":true,\"updated\":[");
+                for (ids, 0..) |id, i| {
+                    if (i > 0) try c.out.writeByte(',');
+                    try O.jstr(c.out, id);
+                }
+                try c.out.writeAll("]}\n");
+            },
+        }
+        return;
+    }
     var refs: std.ArrayList(W.ItemRef) = .empty;
     for (ids) |id| if (W.findItem(w, id)) |r| try refs.append(c.a, r);
     try O.itemsOut(c.out, w, refs.items, refs.items.len, try viewOf(c.a, o));
@@ -795,9 +815,7 @@ fn setDone(c: Ctx, o: *const Opts, done: bool, cmd: []const u8) !void {
         try W.commitItem(c.a, &w, r, it);
     }
     try commit(c, &w, o);
-    var o2 = o.*;
-    if (o2.fields == null) o2.brief = true;
-    try printUpdated(c, &w, o.pos.items, &o2);
+    try printUpdated(c, &w, o.pos.items, o);
 }
 
 /// Salva lo stato del work; salvo --no-sync aggiorna anche Stato degli step e entrypoint.
@@ -1614,7 +1632,7 @@ fn dropField(a: std.mem.Allocator, it: *W.Item, key: []const u8) !void {
 
 fn printWith(c: Ctx, w: *const W.Work, ids: []const []const u8, o: *const Opts, default_fields: []const u8) !void {
     var o2 = o.*;
-    if (o2.fields == null and !o2.brief) o2.fields = default_fields;
+    if (o2.fields == null and !o2.brief and o2.full) o2.fields = default_fields;
     try printUpdated(c, w, ids, &o2);
 }
 
