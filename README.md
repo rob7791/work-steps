@@ -49,10 +49,7 @@ La skill `wk` vive in `.agents/skills/wk/` (cartella letta da Codex e Antigravit
 
 ## Plugin di Claude Code
 
-Il repository è anche un plugin (`work-steps`): skill `wk` + binario + due hook.
-
-    /plugin marketplace add rob7791/work-steps      # oppure un percorso locale del clone
-    /plugin install work-steps@work-steps
+Il repository è anche un plugin (`work-steps`, installazione in [Per iniziare](#per-iniziare)): skill `wk` + binario + due hook.
 
 - **Skill**: `.agents/skills/wk` (la stessa che leggono Codex e Antigravity), come `work-steps:wk`.
 - **Binario**: `bin/wk` è un lanciatore che sceglie `bin/<os>-<arch>/wk` (linux, macos, windows × x86_64, aarch64).
