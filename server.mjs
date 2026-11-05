@@ -153,7 +153,7 @@ const json = (res, code, body) => { res.writeHead(code, { 'content-type': 'appli
 const readBody = req => new Promise(r => { let b = ''; req.on('data', d => { b += d; if (b.length > 200000) req.destroy(); }); req.on('end', () => { try { r(JSON.parse(b || '{}')); } catch { r({}); } }); });
 
 // Le risposte si registrano sempre tramite `wk reply` (lock, validazione, formato): mai scrivendo i file da qui.
-const wkCandidates = () => [process.env.WK_BIN, 'wk', path.join(here, 'cli', 'zig-out', 'bin', 'wk')].filter(Boolean);
+const wkCandidates = () => [process.env.WK_BIN, path.join(here, 'bin', 'wk'), 'wk', path.join(here, 'cli', 'zig-out', 'bin', 'wk')].filter(Boolean);
 const runWk = args => new Promise(resolve => {
   const c = wkCandidates();
   const next = i => {
