@@ -8,7 +8,7 @@
       "name": "work-steps",
       "source": "./",
       "description": "wk CLI and skills for managing checklist works, dependencies, delegation, and automatic execution.",
-      "version": "0.3.0"
+      "version": "0.4.0-alpha.1"
     }
   ],
   "description": "Checklist works for coding agents: the wk CLI and skills for items, dependencies, delegation, automatic execution, and questions."
