@@ -7,9 +7,9 @@
     {
       "name": "work-steps",
       "source": "./",
-      "description": "CLI `wk` e skill per gestire work a checklist (voci, dipendenze, deleghe, modalità automatica).",
+      "description": "wk CLI and skills for managing checklist works, dependencies, delegation, and automatic execution.",
       "version": "0.3.0"
     }
   ],
-  "description": "CLI wk e skill per gestire work a checklist con agenti di codice"
+  "description": "Checklist works for coding agents: the wk CLI and skills for items, dependencies, delegation, automatic execution, and questions."
 }

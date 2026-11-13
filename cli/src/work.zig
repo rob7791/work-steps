@@ -155,7 +155,7 @@ pub fn parseStep(a: A, step: *Step) !void {
 
     for (lines, 0..) |l, i| {
         if (step.title.len == 0 and std.mem.startsWith(u8, l, "# ")) step.title = trim(l[2..]);
-        if (step.status.len == 0 and std.mem.startsWith(u8, l, "**Stato:**")) step.status = trim(std.mem.trimEnd(u8, trim(l["**Stato:**".len..]), "\\"));
+        if (step.status.len == 0 and std.mem.startsWith(u8, l, "**Status:**")) step.status = trim(std.mem.trimEnd(u8, trim(l["**Status:**".len..]), "\\"));
         if (std.mem.startsWith(u8, l, "## ")) {
             if (step.cl_start == null) {
                 if (std.ascii.startsWithIgnoreCase(trim(l[3..]), "checklist")) step.cl_start = i;
@@ -383,12 +383,12 @@ pub fn addItem(a: A, w: *const Work, si: usize, after: ?ItemRef, it: Item) !void
     try replaceRange(a, step, at, at, nl.items);
 }
 
-/// Riscrive il valore di `**Stato:**` preservando il suffisso (spazi di a-capo markdown).
+/// Riscrive il valore di `**Status:**` preservando il suffisso (spazi di a-capo markdown).
 pub fn setStatus(a: A, step: *Step, value: []const u8) !void {
     for (step.lines.items, 0..) |l, i| {
-        if (std.mem.startsWith(u8, l, "**Stato:**")) {
+        if (std.mem.startsWith(u8, l, "**Status:**")) {
             const suffix = l[std.mem.trimEnd(u8, l, " \t\r\\").len..]; // spazi o `\` di a capo markdown
-            step.lines.items[i] = try std.fmt.allocPrint(a, "**Stato:** {s}{s}", .{ value, suffix });
+            step.lines.items[i] = try std.fmt.allocPrint(a, "**Status:** {s}{s}", .{ value, suffix });
             step.status = value;
             step.dirty = true;
             return;
@@ -396,7 +396,7 @@ pub fn setStatus(a: A, step: *Step, value: []const u8) !void {
     }
 }
 
-/// Imposta (o inserisce sotto `**Stato:**`) una riga di metadati `**Etichetta:** valore`.
+/// Imposta (o inserisce sotto `**Status:**`) una riga di metadati `**Etichetta:** valore`.
 pub fn setMeta(a: A, step: *Step, label: []const u8, value: []const u8) !void {
     const prefix = try std.fmt.allocPrint(a, "**{s}:**", .{label});
     const lines = step.lines.items;
@@ -409,7 +409,7 @@ pub fn setMeta(a: A, step: *Step, label: []const u8, value: []const u8) !void {
             break;
         }
         if (title == null and std.mem.startsWith(u8, l, "# ")) title = i;
-        if (std.mem.startsWith(u8, l, "**Stato:**")) stato = i;
+        if (std.mem.startsWith(u8, l, "**Status:**")) stato = i;
     }
     for (lines[0..first_h2], 0..) |l, i| {
         if (!std.mem.startsWith(u8, l, prefix)) continue;
@@ -493,15 +493,15 @@ test "parse voce con id, tag e campi" {
     defer arena.deinit();
     const a = arena.allocator();
     var s: Step = .{ .idx = 0, .file = "tasks-step-001.md", .path = "x", .key = "step-001" };
-    try setContent(a, &s, "# Titolo\n\n**Stato:** in corso\n\n## Checklist\n\n- [x] ab12 | Fare | cose\n  - tags: A, b ,a\n  - owner: io\n  testo libero\n- [ ] senza id\n\n## Altro\n");
+    try setContent(a, &s, "# Title\n\n**Status:** in progress\n\n## Checklist\n\n- [x] ab12 | Do | things\n  - tags: A, b ,a\n  - owner: me\n  free text\n- [ ] without id\n\n## Other\n");
     try std.testing.expectEqual(@as(usize, 2), s.items.len);
     const it = s.items[0];
     try std.testing.expect(it.done);
     try std.testing.expectEqualStrings("ab12", it.id);
-    try std.testing.expectEqualStrings("Fare | cose", it.label);
+    try std.testing.expectEqualStrings("Do | things", it.label);
     try std.testing.expectEqual(@as(usize, 2), it.tags.len);
-    try std.testing.expectEqualStrings("io", it.fields[0].value);
+    try std.testing.expectEqualStrings("me", it.fields[0].value);
     try std.testing.expectEqual(@as(usize, 1), it.notes.len);
     try std.testing.expectEqualStrings("", s.items[1].id);
-    try std.testing.expectEqualStrings("in corso", s.status);
+    try std.testing.expectEqualStrings("in progress", s.status);
 }

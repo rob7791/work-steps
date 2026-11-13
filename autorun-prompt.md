@@ -1,22 +1,16 @@
-Modalità automatica sul work `.work/nome-work`, con deleghe. Limite: 100 voci.
+Automatic mode on work `.work/my-work`, with delegation. Limit: 100 items.
 
 <!--
-Cosa va nel prompt: attivazione esplicita, work, deleghe sì/no, limite di voci.
-`--delegate` lo imposta l'agente quando scrivi "con deleghe".
-Il resto è nella skill e in `wk help auto` (procedura, condizioni di stop, resoconto);
-le autorizzazioni e la politica deleghe stanno nell'entrypoint ("Autorizzazione attuale",
-"Politica deleghe": impostabile con `wk entry set "Politica deleghe" "max 3 in parallelo, modello …"`).
+The request must explicitly enable automatic mode and specify the work, whether delegation is allowed, and an item limit. The agent sets --delegate when delegation is requested.
 
-Come gestisce le domande:
-- finché c'è lavoro disponibile l'agente NON ti interrompe: mette le voci in attesa e va avanti; le domande
-  compaiono nella dashboard (pulsante "Domande", titolo della scheda, avvisi opzionali) e puoi rispondere lì;
-- quando non resta altro da fare perché mancano solo risposte, le presenta subito in chat con lo strumento
-  nativo di domande del suo CLI, registra le risposte e riprende;
-- se le rimandi, si ferma e le riporta nel resoconto.
+The skill and `wk help auto` define execution, stop conditions, and reporting. Authorization and delegation policy belong in the entrypoint:
+  wk entry set "Delegation policy" "At most 3 agents in parallel, model …"
 
-Varianti
-- risposte solo dalla dashboard, con pazienza:  … Limite: 100 voci. Attendi le risposte dalla dashboard fino a 30 minuti prima di chiedermele in chat.
-- senza deleghe:   Modalità automatica sul work `.work/nome-work`. Limite: 100 voci.
-- con priorità:    … Parti dallo step 2 e lascia per ultime le voci di step 8.
-- primo giro:      … Limite: 5 voci. (poi rivedi gli esiti e alza il limite)
+While other work is available, the agent parks questions and continues. Questions appear in the dashboard, where the user can answer them. When only questions remain, the agent presents them in chat using its native question tool, records answers, and resumes. If the user defers them, it stops and reports them.
+
+Variants:
+- Dashboard answers first: … Limit: 100 items. Wait up to 30 minutes for dashboard answers before asking in chat.
+- Without delegation: Automatic mode on work `.work/my-work`. Limit: 100 items.
+- Priorities: … Start with step 2 and leave step 8 until last.
+- Initial trial: … Limit: 5 items. Review results before increasing the limit.
 -->

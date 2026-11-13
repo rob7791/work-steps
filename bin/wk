@@ -21,7 +21,7 @@ if [ ! -x "$exe" ]; then
 fi
 if [ ! -x "$exe" ]; then
   [ "$1" = hook ] && exit 0
-  echo "wk: nessun binario per $os-$arch in $d (esegui scripts/build.sh o installa wk nel PATH)" >&2
+  echo "wk: no binary for $os-$arch in $d (run scripts/build.sh or install wk on PATH)" >&2
   exit 127
 fi
 exec "$exe" "$@"

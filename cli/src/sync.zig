@@ -1,4 +1,4 @@
-//! Sincronizza i campi derivabili: `**Stato:**` degli step e "Current task" dell'entrypoint
+//! Sincronizza i campi derivabili: `**Status:**` degli step e "Current task" dell'entrypoint
 //! (File, Stato, Avanzamento). I campi in prosa non vengono mai toccati.
 const std = @import("std");
 const W = @import("work.zig");
@@ -27,9 +27,9 @@ fn derive(step: W.Step) ?[]const u8 {
     if (c.total == 0) return null;
     const cur = step.status;
     const starts = std.ascii.startsWithIgnoreCase;
-    if (c.done == c.total) return if (starts(cur, "completato")) null else "completato";
-    if (starts(cur, "completato")) return "in corso";
-    if (c.done > 0 and (cur.len == 0 or starts(cur, "da iniziare"))) return "in corso";
+    if (c.done == c.total) return if (starts(cur, "completed")) null else "completed";
+    if (starts(cur, "completed")) return "in progress";
+    if (c.done > 0 and (cur.len == 0 or starts(cur, "not started"))) return "in progress";
     return null;
 }
 
@@ -56,7 +56,7 @@ pub fn sync(a: A, w: *const W.Work, entry: *?E.Entry) !Result {
             if (s.status.len == 0) continue; // niente riga Stato: non la inventa
             const from = s.status;
             try W.setStatus(a, s, want);
-            try changes.append(a, .{ .target = s.file, .field = "Stato", .from = from, .to = want });
+            try changes.append(a, .{ .target = s.file, .field = "Status", .from = from, .to = want });
         }
     }
 
@@ -72,13 +72,13 @@ pub fn sync(a: A, w: *const W.Work, entry: *?E.Entry) !Result {
                 tot_t += counts(x).total;
             }
             const file_v = try std.fmt.allocPrint(a, "[{s} — {s}]({s})", .{ s.file, shortTitle(s.title), s.file });
-            const prog_v = try std.fmt.allocPrint(a, "{d}/{d} nello step, {d}/{d} nel work", .{ c.done, c.total, tot_d, tot_t });
-            const stato_v = if (s.status.len > 0) s.status else "da iniziare";
+            const prog_v = try std.fmt.allocPrint(a, "{d}/{d} in this step, {d}/{d} in this work", .{ c.done, c.total, tot_d, tot_t });
+            const stato_v = if (s.status.len > 0) s.status else "not started";
             const Pair = struct { l: []const u8, v: []const u8, after: ?[]const u8 };
             const pairs = [_]Pair{
                 .{ .l = "File", .v = file_v, .after = null },
-                .{ .l = "Stato", .v = stato_v, .after = "File" },
-                .{ .l = "Avanzamento", .v = prog_v, .after = "Stato" },
+                .{ .l = "Status", .v = stato_v, .after = "File" },
+                .{ .l = "Progress", .v = prog_v, .after = "Status" },
             };
             for (pairs) |p| {
                 const from = e.get(p.l) orelse "";
@@ -100,16 +100,16 @@ test "derive: promuove, riapre, non retrocede" {
         .{ .step = 0, .line = 0, .end = 0, .done = true, .id = "a", .label = "", .group = "", .tags = &.{}, .fields = &.{}, .notes = &.{} },
         .{ .step = 0, .line = 0, .end = 0, .done = false, .id = "b", .label = "", .group = "", .tags = &.{}, .fields = &.{}, .notes = &.{} },
     };
-    var s: W.Step = .{ .idx = 0, .file = "f", .path = "p", .key = "k", .status = "da iniziare", .items = &items };
-    try std.testing.expectEqualStrings("in corso", derive(s).?);
-    s.status = "in corso";
+    var s: W.Step = .{ .idx = 0, .file = "f", .path = "p", .key = "k", .status = "not started", .items = &items };
+    try std.testing.expectEqualStrings("in progress", derive(s).?);
+    s.status = "in progress";
     try std.testing.expect(derive(s) == null);
     items[1].done = true;
-    try std.testing.expectEqualStrings("completato", derive(s).?);
-    s.status = "completato";
+    try std.testing.expectEqualStrings("completed", derive(s).?);
+    s.status = "completed";
     items[1].done = false;
-    try std.testing.expectEqualStrings("in corso", derive(s).?);
+    try std.testing.expectEqualStrings("in progress", derive(s).?);
     items[0].done = false;
-    s.status = "in corso";
+    s.status = "in progress";
     try std.testing.expect(derive(s) == null);
 }

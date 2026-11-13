@@ -17,7 +17,7 @@ for t in $targets; do
     linux) triple="$arch-linux-musl" ;;
     macos) triple="$arch-macos" ;;
     windows) triple="$arch-windows" ;;
-    *) echo "target sconosciuto: $t" >&2; exit 1 ;;
+    *) echo "unknown target: $t" >&2; exit 1 ;;
   esac
   out="$root/bin/$t"
   echo "== $t ($triple)"

@@ -128,7 +128,7 @@ pub const Entry = struct {
         return true;
     }
 
-    const version_prefix = "**Versione documenti:**";
+    const version_prefix = "**Document version:**";
 
     /// Versione del formato dichiarata in testa al file (prima del primo `## `); null se assente.
     pub fn formatVersion(self: *const Entry) ?u32 {
@@ -139,7 +139,7 @@ pub const Entry = struct {
         return null;
     }
 
-    /// Scrive la riga `**Versione documenti:** N` sotto il titolo (o aggiorna quella esistente).
+    /// Scrive la riga `**Document version:** N` sotto il titolo (o aggiorna quella esistente).
     pub fn setFormatVersion(self: *Entry, a: A, v: u32) !void {
         const line = try std.fmt.allocPrint(a, "{s} {d}", .{ version_prefix, v });
         for (self.lines.items, 0..) |l, i| {
@@ -182,10 +182,10 @@ test "set/get/unset campi Current task" {
     try std.testing.expectEqualStrings("a", e.get("file").?);
     try std.testing.expect(!try e.set(a, "File", "a", null));
     try std.testing.expect(try e.set(a, "Git", "nuovo", null));
-    try std.testing.expect(try e.set(a, "Stato", "in corso", "File"));
-    try std.testing.expectEqualStrings("in corso", e.get("Stato").?);
+    try std.testing.expect(try e.set(a, "Status", "in progress", "File"));
+    try std.testing.expectEqualStrings("in progress", e.get("Status").?);
     try std.testing.expectEqualStrings("File", (try e.fields(a))[0].label);
-    try std.testing.expectEqualStrings("Stato", (try e.fields(a))[1].label);
+    try std.testing.expectEqualStrings("Status", (try e.fields(a))[1].label);
     try std.testing.expect(try e.unset(a, "Z"));
     try std.testing.expectEqualStrings("## Note", e.lines.items[e.ce]);
 }
@@ -198,7 +198,7 @@ test "versione documenti: lettura, inserimento, aggiornamento" {
     try std.testing.expect(e.formatVersion() == null);
     try e.setFormatVersion(a, 1);
     try std.testing.expectEqual(@as(u32, 1), e.formatVersion().?);
-    try std.testing.expectEqualStrings("**Versione documenti:** 1", e.lines.items[2]);
+    try std.testing.expectEqualStrings("**Document version:** 1", e.lines.items[2]);
     try std.testing.expectEqualStrings("intro", e.lines.items[4]);
     try e.setFormatVersion(a, 2);
     try std.testing.expectEqual(@as(u32, 2), e.formatVersion().?);

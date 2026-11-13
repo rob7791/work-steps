@@ -1,7 +1,7 @@
 {
   "name": "work-steps",
   "version": "0.3.0",
-  "description": "Work a checklist per agenti: la CLI `wk` (voci, dipendenze, deleghe, modalità automatica, domande) e la skill per usarla senza editare a mano i markdown.",
+  "description": "Checklist works for coding agents: the wk CLI for items, dependencies, delegation, automatic execution, and questions, plus skills for updating work Markdown through the CLI.",
   "author": {
     "name": "Roberto Annunziatella"
   },

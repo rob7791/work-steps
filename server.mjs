@@ -126,7 +126,7 @@ function parseEntrypoint(text) {
     for (const l of cur.split('\n')) { const m = l.match(/^-\s+\*\*(.+?):\*\*\s*(.*)$/); if (m) fields.push({ label: m[1], value: m[2] }); }
     out.current = { fields, raw: cur };
   }
-  out.notes = sec('Note') || '';
+  out.notes = sec('Notes') || '';
   return out;
 }
 
@@ -157,7 +157,7 @@ const wkCandidates = () => [process.env.WK_BIN, path.join(here, 'bin', 'wk'), 'w
 const runWk = args => new Promise(resolve => {
   const c = wkCandidates();
   const next = i => {
-    if (i >= c.length) return resolve({ ok: false, error: 'wk non trovato: mettilo nel PATH o imposta WK_BIN' });
+    if (i >= c.length) return resolve({ ok: false, error: 'wk not found: add it to PATH or set WK_BIN' });
     execFile(c[i], args, { timeout: 15000 }, (err, stdout, stderr) => {
       if (err && err.code === 'ENOENT') return next(i + 1);
       if (err) return resolve({ ok: false, error: (stderr || err.message).replace(/^error:\s*/, '').trim() });
@@ -191,10 +191,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname === '/api/doc') { // plan.md / entrypoint.md di un work configurato (sola lettura)
       const file = url.searchParams.get('file'), dir = path.resolve(url.searchParams.get('work') || '');
-      if (!['plan', 'entrypoint'].includes(file)) return json(res, 400, { error: 'file non ammesso' });
+      if (!['plan', 'entrypoint'].includes(file)) return json(res, 400, { error: 'file not allowed' });
       let known = false;
       for (const p of (await loadConfig()).paths) if ((await findWorks(p)).works.includes(dir)) { known = true; break; }
-      if (!known) return json(res, 404, { error: 'work non configurato' });
+      if (!known) return json(res, 404, { error: 'work not configured' });
       const full = path.join(dir, file + '.md');
       return json(res, 200, { file: file + '.md', text: await fs.readFile(full, 'utf8'), mtime: (await fs.stat(full)).mtimeMs });
     }
@@ -203,11 +203,11 @@ const server = http.createServer(async (req, res) => {
       const b = await readBody(req);
       const dir = path.resolve(String(b.work || '')), id = String(b.id || '');
       const answer = String(b.answer || '').replace(/\s*\r?\n\s*/g, ' ').trim();
-      if (!/^[A-Za-z0-9_-]{1,32}$/.test(id)) return json(res, 400, { error: 'id non valido' });
-      if (!answer || answer.length > 2000) return json(res, 400, { error: 'risposta vuota o troppo lunga' });
+      if (!/^[A-Za-z0-9_-]{1,32}$/.test(id)) return json(res, 400, { error: 'invalid ID' });
+      if (!answer || answer.length > 2000) return json(res, 400, { error: 'answer is empty or too long' });
       let known = false;
       for (const p of (await loadConfig()).paths) if ((await findWorks(p)).works.includes(dir)) { known = true; break; }
-      if (!known) return json(res, 404, { error: 'work non configurato' });
+      if (!known) return json(res, 404, { error: 'work not configured' });
       const r = await runWk(['reply', '-w', dir, '--', id, answer]);
       return json(res, r.ok ? 200 : 409, r.ok ? { ok: true } : { error: r.error });
     }
@@ -216,11 +216,11 @@ const server = http.createServer(async (req, res) => {
       const b = await readBody(req);
       const dir = path.resolve(String(b.work || '')), id = String(b.id || '');
       const note = String(b.note || '').replace(/\s*\r?\n\s*/g, ' ').trim();
-      if (!/^[A-Za-z0-9_-]{1,32}$/.test(id)) return json(res, 400, { error: 'id non valido' });
-      if (note.length > 400) return json(res, 400, { error: 'nota troppo lunga' });
+      if (!/^[A-Za-z0-9_-]{1,32}$/.test(id)) return json(res, 400, { error: 'invalid ID' });
+      if (note.length > 400) return json(res, 400, { error: 'note is too long' });
       let known = false;
       for (const p of (await loadConfig()).paths) if ((await findWorks(p)).works.includes(dir)) { known = true; break; }
-      if (!known) return json(res, 404, { error: 'work non configurato' });
+      if (!known) return json(res, 404, { error: 'work not configured' });
       const args = url.pathname === '/api/defer' ? ['defer', '-w', dir, ...(note ? ['--note', note] : []), '--', id] : ['undefer', '-w', dir, '--', id];
       const r = await runWk(args);
       return json(res, r.ok ? 200 : 409, r.ok ? { ok: true } : { error: r.error });

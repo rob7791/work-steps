@@ -1,95 +1,65 @@
-# wk — CLI per i work a checklist
+# wk — checklist work CLI
 
-Binario Zig (0.17.1, zero dipendenze) per leggere e modificare i work (`entrypoint.md`, `plan.md`,
-`tasks-step-*.md`) senza toccare i markdown a mano. Pensato per agenti: output JSON compatto,
-filtri, ordinamenti, errori chiari su stderr (exit 1).
+A dependency-free Zig 0.17.1 CLI for reading and updating works through compact JSON output, filters, and sorting. Errors go to stderr with exit code 1; validation findings use exit code 2.
 
     cd cli
-    zig build -Doptimize=ReleaseSafe     # → zig-out/bin/wk
+    zig build -Doptimize=ReleaseSafe
     zig build test
-    wk help            # comandi
-    wk help format     # formato dei documenti
-    wk help filters    # filtri/ordinamenti
+    wk help
+    wk help format
+    wk help filters
 
-Formato di una voce nella sezione `## Checklist`:
+A checklist item inside `## Checklist` looks like this:
 
-    - [x] k3f9 | Etichetta libera
+    - [x] k3f9 | Free-form label
       - tags: infra, php
-      - owner: marco
+      - owner: sam
 
-Il tool riscrive solo le righe delle voci modificate; il resto dei file resta identico.
-Per migrare un work esistente: `wk assign-ids -w DIR`.
+Use `wk` to update work documents. The CLI preserves unrelated lines. `wk assign-ids -w DIR` assigns missing item IDs.
 
-## Sincronizzazione dell'entrypoint
+## Progress synchronization
 
-`check`, `uncheck`, `add`, `rm` e `new-step` aggiornano da soli (disattivabile con `--no-sync`):
+`check`, `uncheck`, `add`, `rm`, and `new-step` synchronize derived fields unless `--no-sync` is set. Step `**Status:**` values are `not started`, `in progress`, `blocked`, and `completed`. Completing the first item starts a step; completing all items completes it; reopening an item reopens the step. A blocked step is preserved while unfinished.
 
-- `**Stato:**` dello step: `in corso` alla prima voce completata, `completato` quando sono tutte
-  fatte, di nuovo `in corso` se ne riappare una aperta. Non retrocede e non tocca `bloccato`.
-- `## Current task` di `entrypoint.md`: **File** (primo step con voci aperte), **Stato**, **Avanzamento**.
+The entrypoint's `## Current task` contains derived **File**, **Status**, and **Progress** fields. Prose fields such as **Next action**, **Blockers**, and **Context** are updated explicitly:
 
-I campi in prosa (Prossima azione, Blocchi, Contesto…) restano a chi li scrive, con
-`wk entry set "Prossima azione" "testo"`. `wk sync [--dry-run]` forza l'allineamento
-(utile dopo modifiche manuali ai file).
+    wk entry set "Next action" "Verify the implementation"
+    wk sync --dry-run
 
-## Delega e dipendenze
+## Dependencies and delegation
 
-Ogni voce può avere `mode: isolated|integrated` (delegabile a un sottoagente con contesto circoscritto /
-serve il contesto complessivo), `mode_reason` e `deps: ID, ID`. Pronte/bloccate si calcolano dalle dipendenze.
+Items can declare `mode: isolated|integrated`, `mode_reason`, and `deps: ID, ID`. Isolated items can be delegated with bounded context; integrated items require the wider context. Dependencies determine readiness.
 
-    wk classify ID… --mode isolated --reason "…"     # anche per riclassificare
-    wk dep add|rm|set ID DEP…                        # rifiuta cicli e ID inesistenti
-    wk deps [ID] [--up|--down] [--depth N] [--open]  # alberatura, parziale o intera
-    wk waves [--mode isolated]                       # cosa eseguire (in parallelo) e in che ordine
-    wk list --ready | --blocked | --delegable | --deps some-done | --needs ID | --needed-by ID
+    wk classify ID --mode isolated --reason "Independent change"
+    wk dep add ID DEP
+    wk deps ID --up
+    wk waves --mode isolated
+    wk list --ready
+    wk list --blocked
+    wk list --delegable
 
-`wk next` salta le voci bloccate. Dettagli: `wk help delegation`.
+`wk next` skips blocked items. See `wk help delegation` for the delegation procedure.
 
-## Consumi
+## Keep context small
 
-Il tool sposta la lettura dai documenti ai comandi, e tiene piccoli sia l'output sia i documenti:
+Resume with `wk steps` and `wk next`. Read plans by section with `wk plan` and `wk plan "Section"`. `wk entry slim` moves extra entrypoint sections to `entrypoint-archive.md`.
 
-- `wk steps` + `wk next` bastano per riprendere: l'entrypoint contiene solo `Current task` (`wk entry slim`
-  sposta il resto in `entrypoint-archive.md`, da non leggere) e il plan si legge a sezioni (`wk plan`, `wk plan "titolo"`).
-- Nella vista predefinita i valori oltre 300 caratteri sono accorciati con `[+N car.: wk get ID --fields chiave]`
-  (`answer`, `hold` e le opzioni mai); `--fields chiave` o `--full` danno il testo intero.
-- Le scritture (`check`, `set`, `hold`, `classify`…) rispondono solo `{"ok":true,"updated":[ID…]}`; `--full` stampa anche
-  la voce aggiornata. `add` stampa sempre la voce creata.
-- Testi scritti: max 400 caratteri per campo (`set`, `add --set`, `check --result`), 240 per le etichette, 700 per
-  le domande; `--long` salta il limite. `wk validate` avvisa se entrypoint > 4 KB, plan > 16 KB o ci sono campi lunghi.
+Values over 300 characters are abbreviated by default, except answers, held questions, and answer options; use `--fields KEY` or `--full` for complete values. Writes normally return only `{"ok":true,"updated":[ID…]}`. `--full` also returns updated items; `add` always returns the new item.
 
-## Costruire e documentare un work
+Default write limits are 400 characters per field, 240 per label, and 700 per question. `--long` bypasses these limits. Validation warns about large documents and fields.
 
-`wk init`, `wk new-step --phase --prereq`, `wk step-set`, `wk section ls|get|set` (step, `plan`, `entrypoint`)
-e `wk validate` coprono la creazione senza editare i file. Guida: `wk help init`.
+## Create and maintain a work
 
-## Versione dei documenti e migrazioni
+Use `wk init`, `wk new-step --phase --prereq`, `wk step-set`, `wk section ls|get|set`, and `wk validate`. See `wk help init`.
 
-L'entrypoint dichiara la versione del formato dei documenti (`**Versione documenti:** N`, assente = 0,
-formato sperimentale precedente). È indipendente dalla versione del tool: `wk version` mostra quella
-che il tool produce e le migrazioni note. Ogni comando avvisa (stderr) se il work è più vecchio del tool (`wk entry get` riporta `format.work` e `format.tool`): `wk migrate --from <format.work> [--dry-run]`. Un work più recente del tool viene rifiutato.
-Per aggiungere una migrazione: nuova voce in `src/format.zig` (`migrations` + ramo in `apply`) e `current`.
+Document format versions are independent of the CLI version. The entrypoint declares `**Document version:** N`; a missing version is interpreted as 0. `wk version` lists supported migrations. Older formats produce a warning; newer formats are rejected. Inspect with `wk entry get`, then use `wk migrate --from N --dry-run` before applying a supported migration. Migration implementations live in `src/format.zig`.
 
-## Modalità automatica e deleghe in parallelo
+## Automatic execution and questions
 
-`wk hold/resolve/questions` (voci in attesa di una decisione), `wk claim/unclaim` (presa in carico),
-`wk brief` (scheda di delega per un sottoagente), `wk check --result`, contatori in `wk steps` e motivo
-quando `wk next` non trova nulla. Le scritture prendono un lock sulla cartella del work: più processi `wk`
-in parallelo non si sovrascrivono (senza lock, in prova, circa metà degli aggiornamenti andava persa).
-Guida e rischi: `wk help auto`.
+Automatic mode requires an explicit user request and an item limit. See `wk help auto`. `wk hold ID "Question" --option … --default …` parks an item while other work continues. Answers from the dashboard are recorded through `wk reply`, including its validation and lock. Agents use `wk reply ID "Answer"`; interactive `wk reply` is for humans.
 
-## Risposte alle domande (dashboard, `wk reply`, attesa)
+`wk auto status` and `wk steps` expose answered items. When only unanswered questions remain, `ask_user` means present them in chat, record the answers, and resume. Optional `wk auto start --wait MINUTES` and `wk auto wait` allow dashboard answers first.
 
-`wk hold ID "domanda" [--option …] [--default …]` parcheggia una voce senza fermare l'agente. L'utente risponde
-dalla dashboard (pulsante "Domande": le risposte si registrano con `wk reply`, quindi con lock e validazione) oppure
-da un terminale con `wk reply` (una domanda alla volta). `wk reply ID "risposta"…` è la forma per gli agenti.
-L'agente si accorge delle risposte da `wk auto status`/`wk steps` (`answered`) e `wk next` riprende per prime le voci
-risposte. Quando non resta altro da fare e mancano solo risposte, `wk auto status` dà `ask_user`: l'agente le presenta
-in chat con lo strumento nativo del suo CLI e riprende. `wk auto start --wait MINUTI` + `wk auto wait` sono opzionali:
-attendono prima le risposte dalla dashboard, poi si chiede in chat.
+Only the user can defer a question. Record this with `wk defer ID --note "What we are waiting for"`; use `wk undefer ID` to return it to the queue. `wk questions --deferred` lists deferred questions and blocked dependents. `only_deferred` is a stop condition. Deferral is not an answer and must not be offered as an answer option.
 
-L'utente può **rimandare** una domanda (pulsante "Rimanda" della dashboard, con una nota facoltativa su cosa aspetta):
-`wk defer ID [--note …]` la toglie dalla coda senza toccarne il testo, `wk undefer ID` la rimette in coda,
-`wk questions --deferred` le elenca con la nota e quante voci fermano. La voce e quelle che ne dipendono restano ferme;
-se restano solo quelle, `wk auto status` dà `only_deferred` (stop, senza riproporre le domande). `wk hold` rifiuta
-opzioni che sono un rinvio ("Rimanda", "Non ancora"…): rinviare non è una risposta.
+`wk claim/unclaim` tracks ownership, `wk brief` provides delegation context, and `wk check --result` records verified results. Work directory locks protect concurrent writes on supported platforms.

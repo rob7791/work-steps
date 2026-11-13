@@ -1,5 +1,5 @@
 //! Versione del formato dei documenti (indipendente dalla versione del tool) e migrazioni.
-//! La versione sta nell'entrypoint: `**Versione documenti:** N`. Assente = 0 (formato sperimentale
+//! La versione sta nell'entrypoint: `**Document version:** N`. Assente = 0 (formato sperimentale
 //! precedente: voci senza ID, nessun Avanzamento in Current task).
 const std = @import("std");
 const W = @import("work.zig");
@@ -15,7 +15,7 @@ pub const migrations = [_]Migration{
     .{
         .from = 0,
         .to = 1,
-        .summary = "assegna un ID a ogni voce di checklist, dichiara la versione nell'entrypoint e allinea Stato degli step e Current task (File, Stato, Avanzamento). Non modifica testi, note né altre sezioni.",
+        .summary = "assign IDs to checklist items, declare the document version, and synchronize step Status and Current task (File, Status, Progress). Preserve prose, notes, and other sections.",
     },
 };
 

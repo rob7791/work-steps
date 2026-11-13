@@ -32,7 +32,7 @@ fn clipped(s: []const u8, key: []const u8, v: View) ?usize {
 fn clipStr(w: *Writer, s: []const u8, id: []const u8, key: []const u8, v: View) !void {
     const k = clipped(s, key, v) orelse return jstr(w, s);
     var buf: [200]u8 = undefined;
-    const tail = std.fmt.bufPrint(&buf, "… [+{d} car.: wk get {s} --fields {s}]", .{ s.len - k, id, key }) catch "…";
+    const tail = std.fmt.bufPrint(&buf, "… [+{d} chars: wk get {s} --fields {s}]", .{ s.len - k, id, key }) catch "…";
     var tmp: [clip_over + 220]u8 = undefined;
     @memcpy(tmp[0..k], s[0..k]);
     @memcpy(tmp[k .. k + tail.len], tail);
@@ -163,7 +163,7 @@ pub fn itemText(w: *Writer, wk: *const W.Work, it: W.Item, v: View) !void {
     if (v.brief) return;
     for (it.tags) |t| try w.print("  #{s}", .{t});
     for (it.fields) |f| {
-        if (clipped(f.value, f.key, v)) |k| try w.print("  {s}={s}… [+{d} car.: wk get {s} --fields {s}]", .{ f.key, f.value[0..k], f.value.len - k, it.id, f.key }) else try w.print("  {s}={s}", .{ f.key, f.value });
+        if (clipped(f.value, f.key, v)) |k| try w.print("  {s}={s}… [+{d} chars: wk get {s} --fields {s}]", .{ f.key, f.value[0..k], f.value.len - k, it.id, f.key }) else try w.print("  {s}={s}", .{ f.key, f.value });
     }
     if (it.deps.len > 0) {
         try w.writeAll("  deps=");
@@ -202,7 +202,7 @@ pub fn oneOut(w: *Writer, wk: *const W.Work, r: ?W.ItemRef, v: View) !void {
         .text => if (r) |x| {
             try itemText(w, wk, wk.steps[x.si].items[x.ii], v);
             try w.writeByte('\n');
-        } else try w.writeAll("(nessuna voce)\n"),
+        } else try w.writeAll("(no item)\n"),
         .ids => if (r) |x| try w.print("{s}\n", .{wk.steps[x.si].items[x.ii].id}),
     }
 }

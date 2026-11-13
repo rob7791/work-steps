@@ -1,17 +1,17 @@
-# Istruzioni per gli agenti
+# Agent instructions
 
-## Work (`.work/`)
+## Works (`.work/`)
 
-I work in `.work/<nome>/` (`entrypoint.md`, `plan.md`, `tasks-step-*.md`) si leggono e si modificano
-**solo** con la CLI `wk`: mai editare a mano checklist ed entrypoint.
+Read and update works in `.work/<name>/` (`entrypoint.md`, `plan.md`, `tasks-step-*.md`)
+**only** through the `wk` CLI. Never edit checklists or entrypoints manually.
 
-- Prima di toccare un work leggi `.agents/skills/wk/SKILL.md` (regole d'uso).
-- Comandi, filtri e formato: `wk help`.
-- Binario: `wk` nel PATH, altrimenti `cli/zig-out/bin/wk`
+- Before touching a work, read `.agents/skills/wk/SKILL.md`.
+- Commands, filters, and format: `wk help`.
+- Binary: `wk` on PATH, otherwise `cli/zig-out/bin/wk`
   (build: `cd cli && zig build -Doptimize=ReleaseSafe`).
 
-## Sviluppo di questo repository
+## Repository development
 
-- CLI in Zig 0.17.1 (`cli/`): `zig build`, `zig build test`.
-- UI di avanzamento: `npm start` (Node, nessuna dipendenza), http://localhost:4317.
-- Commit: Conventional Commits.
+- Zig 0.17.1 CLI (`cli/`): `zig build`, `zig build test`.
+- Progress dashboard: `npm start` (Node, no dependencies), http://localhost:4317.
+- Commits: Conventional Commits.

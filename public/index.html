@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -175,17 +175,17 @@ input.t{width:100%;padding:8px 10px;border:1px solid var(--faint);border-radius:
 <aside>
   <h1>Work Steps</h1>
   <div id="side"></div>
-  <button class="gear" id="cfg">⚙ Percorsi…</button>
+  <button class="gear" id="cfg">⚙ Paths…</button>
 </aside>
 <main id="main"></main>
 
 
 <div id="docv" hidden>
   <div class="dv-back" id="dv-back"></div>
-  <div class="dv-panel" role="dialog" aria-label="Documento">
+  <div class="dv-panel" role="dialog" aria-label="Document">
     <header><b id="dv-title"></b><span class="res" id="dv-meta"></span><span class="sp"></span>
-      <button class="db" data-doc="plan" id="dvb-plan">Piano</button><button class="db" data-doc="entrypoint" id="dvb-entrypoint">Entrypoint</button>
-      <button class="dv-x" id="dv-x" title="Chiudi (Esc)">✕</button></header>
+      <button class="db" data-doc="plan" id="dvb-plan">Plan</button><button class="db" data-doc="entrypoint" id="dvb-entrypoint">Entrypoint</button>
+      <button class="dv-x" id="dv-x" title="Close (Esc)">✕</button></header>
     <div class="dv-body"><nav id="dv-toc"></nav><article class="gh" id="dv-art"></article></div>
   </div>
 </div>
@@ -193,21 +193,21 @@ input.t{width:100%;padding:8px 10px;border:1px solid var(--faint);border-radius:
 
 <div id="qv" hidden>
   <div class="dv-back" id="qv-back"></div>
-  <div class="qpanel" role="dialog" aria-label="Domande in attesa">
-    <header><b id="qv-title">Domande in attesa</b><span class="sp"></span>
-      <button class="db" id="qv-notif" title="Avvisi del browser quando arriva una nuova domanda">Avvisi: no</button>
-      <button class="dv-x" id="qv-x" title="Chiudi (Esc)">✕</button></header>
+  <div class="qpanel" role="dialog" aria-label="Pending questions">
+    <header><b id="qv-title">Pending questions</b><span class="sp"></span>
+      <button class="db" id="qv-notif" title="Browser notifications for new questions">Notifications: off</button>
+      <button class="dv-x" id="qv-x" title="Close (Esc)">✕</button></header>
     <div id="q-list"></div>
   </div>
 </div>
 
 <dialog id="dlg">
-  <h3>Percorsi</h3>
-  <p>Cartelle con i work (es. <code>~/progetto/.work</code>) o la radice di un repository: i work vengono rilevati da <code>entrypoint.md</code> / <code>tasks-*.md</code>.</p>
+  <h3>Paths</h3>
+  <p>Folders containing works (e.g. <code>~/project/.work</code>) or a repository root: works are detected from <code>entrypoint.md</code> / <code>tasks-*.md</code>.</p>
   <div id="plist"></div>
-  <div class="row"><input class="t" id="pin" placeholder="/percorso/assoluto  oppure  ~/cartella"><button class="s" id="brw">Sfoglia</button><button class="s p" id="padd">Aggiungi</button></div>
-  <div id="fbw" hidden><div class="row" style="margin-top:10px"><code id="fbcur" style="flex:1;font-size:12px;word-break:break-all"></code><button class="s" id="fbuse">Usa questa</button></div><div class="fb" id="fb"></div></div>
-  <div class="row" style="justify-content:flex-end;margin-top:18px"><button class="s" id="close">Chiudi</button></div>
+  <div class="row"><input class="t" id="pin" placeholder="/absolute/path  or  ~/folder"><button class="s" id="brw">Browse</button><button class="s p" id="padd">Add</button></div>
+  <div id="fbw" hidden><div class="row" style="margin-top:10px"><code id="fbcur" style="flex:1;font-size:12px;word-break:break-all"></code><button class="s" id="fbuse">Use this</button></div><div class="fb" id="fb"></div></div>
+  <div class="row" style="justify-content:flex-end;margin-top:18px"><button class="s" id="close">Close</button></div>
 </dialog>
 
 <script>
@@ -341,26 +341,26 @@ const pct = (d, t) => t ? Math.round(d / t * 100) : 0;
 const bar = (d, t) => `<div class="bar"><i style="width:${pct(d,t)}%"></i></div>`;
 function pill(s){
   s = (s || '').toLowerCase();
-  const c = s.includes('completat') ? 'ok' : s.includes('corso') ? 'in' : s.includes('blocc') ? 'bl' : '';
+  const c = s.includes('complet') ? 'ok' : s.includes('progress') ? 'in' : s.includes('block') ? 'bl' : '';
   return s ? `<span class="pill ${c}">${esc(s)}</span>` : '';
 }
 const allWorks = () => data.roots.flatMap(r => r.works);
 
 function renderSide(){
   $('#side').innerHTML = data.roots.map(r => `
-    <div class="root ${r.missing?'missing':''}">${esc(r.path)}${r.missing?' — non trovato':''}</div>
-    ${r.works.map(w => `<button class="wk ${w.id===sel?'on':''}" data-id="${esc(w.id)}">${esc(w.title)}${pendingQ(w).length ? `<span class="qn" title="domande in attesa">${pendingQ(w).length}</span>` : ''}<small>${w.done}/${w.total} · ${pct(w.done,w.total)}%</small>${bar(w.done,w.total)}</button>`).join('')}
-    ${!r.missing && !r.works.length ? '<div class="root">nessun work trovato</div>' : ''}`).join('');
+    <div class="root ${r.missing?'missing':''}">${esc(r.path)}${r.missing?' — not found':''}</div>
+    ${r.works.map(w => `<button class="wk ${w.id===sel?'on':''}" data-id="${esc(w.id)}">${esc(w.title)}${pendingQ(w).length ? `<span class="qn" title="pending questions">${pendingQ(w).length}</span>` : ''}<small>${w.done}/${w.total} · ${pct(w.done,w.total)}%</small>${bar(w.done,w.total)}</button>`).join('')}
+    ${!r.missing && !r.works.length ? '<div class="root">no work found</div>' : ''}`).join('');
 }
 
 function renderMain(){
   const w = allWorks().find(x => x.id === sel) || allWorks()[0];
-  if (!w) { $('#main').innerHTML = '<div class="empty">Nessun work. Aggiungi un percorso da ⚙ Percorsi.</div>'; return; }
+  if (!w) { $('#main').innerHTML = '<div class="empty">No works. Add a path under ⚙ Paths.</div>'; return; }
   sel = w.id;
-  if (!openInit) { w.steps.forEach(s => { if (/corso/i.test(s.meta.stato||'')) openSteps.add(w.id+s.file); }); openInit = true; }
+  if (!openInit) { w.steps.forEach(s => { if (/progress/i.test(s.meta.status||'')) openSteps.add(w.id+s.file); }); openInit = true; }
   const cur = w.entry?.current;
   const fv = n => cur?.fields.find(f => f.label.toLowerCase() === n)?.value || '';
-  const nowHtml = cur ? `<details class="now" id="now" ${nowOpen?'open':''}><summary><b>Current task</b>${pill(fv('stato'))}<span class="res">${esc(stripMd(fv('avanzamento')))}</span></summary>${cur.fields.map(f => `<b class="l">${esc(f.label)}</b><div>${inline(f.value)}</div>`).join('')}</details>` : '';
+  const nowHtml = cur ? `<details class="now" id="now" ${nowOpen?'open':''}><summary><b>Current task</b>${pill(fv('status'))}<span class="res">${esc(stripMd(fv('progress')))}</span></summary>${cur.fields.map(f => `<b class="l">${esc(f.label)}</b><div>${inline(f.value)}</div>`).join('')}</details>` : '';
   const tagCount = new Map();
   w.steps.forEach(s => s.groups.forEach(g => g.items.forEach(i => (i.tags||[]).forEach(t => { const k = t.toLowerCase(), e = tagCount.get(k) || { name: t, n: 0 }; e.n++; tagCount.set(k, e); }))));
   const byId = new Map();
@@ -379,23 +379,23 @@ function renderMain(){
     const cnt = s.groups.reduce((n, g) => n + g.items.filter(match).length, 0); found += cnt;
     if (filtering && !cnt) return '';
     const key = w.id + s.file, isOpen = openSteps.has(key) || filtering;
-    const fase = s.meta['fase del piano'];
+    const fase = s.meta['plan phase'];
     const title = s.title.replace(/^Step\s+\d+\s*[—-]\s*/i, '');
     const items = s.groups.map(g => { const vis = g.items.map((i, n) => ({ i, n })).filter(x => match(x.i)); return vis.length ? (g.name ? `<div class="grp">${esc(g.name)}</div>` : '') + vis.map(({ i, n }) => {
       const k = key + '#' + g.name + n;
-      return `<div class="it ${i.done?'done':''} ${!i.done && openDeps(i).length ? 'blk' : ''}" style="${i.level?'margin-left:22px':''}"><span class="ck"></span>${i.id?`<span class="id" data-id="${esc(i.id)}" title="Clicca per copiare">${esc(i.id)}</span>`:''}<span class="tx">${inline(i.text)}${(i.tags||[]).map(t => `<span class="tg ${tagSel.has(t.toLowerCase())?'on':''}" data-tag="${esc(t.toLowerCase())}">${esc(t)}</span>`).join('')}${fieldOf(i, 'mode') ? `<span class="mb ${esc(fieldOf(i, 'mode'))}" title="${esc(fieldOf(i, 'mode_reason') || '')}">${fieldOf(i, 'mode') === 'isolated' ? 'isolata' : 'integrata'}</span>` : ''}${fieldOf(i, 'hold') && !fieldOf(i, 'deferred') ? `<span class="hd" data-qopen="${esc(i.id)}" style="cursor:pointer" title="${esc(fieldOf(i, 'hold'))}">in attesa · rispondi</span>` : ''}${fieldOf(i, 'hold') && fieldOf(i, 'deferred') ? `<span class="df" data-qopen="${esc(i.id)}" style="cursor:pointer" title="${esc(fieldOf(i, 'hold'))}">rimandata il ${esc(fieldOf(i, 'deferred'))}${fieldOf(i, 'defer_note') ? ' · ' + esc(fieldOf(i, 'defer_note')) : ''}</span>` : ''}${!i.done && !fieldOf(i, 'hold') && fieldOf(i, 'answer') ? `<span class="rs" title="Risposta: ${esc(fieldOf(i, 'answer'))}">risposta ricevuta</span>` : ''}${fieldOf(i, 'claimed_by') ? `<span class="cl">in carico: ${esc(fieldOf(i, 'claimed_by'))}</span>` : ''}${(i.deps||[]).map(d => `<span class="dp ${byId.get(d)?.done ? 'ok' : ''}" data-q="${esc(d)}" title="${esc(byId.get(d)?.text || 'voce non trovata')}">↳ ${esc(d)}</span>`).join('')}${!i.done && openDeps(i).length ? '<span class="bk">bloccata</span>' : ''}${(i.fields||[]).filter(f => !/^(mode|mode_reason|deps_reason|hold|hold_options|hold_default|deferred|defer_note|answer|asked|answered_at|claimed_by)$/i.test(f.key)).map(f => `<span class="kv">${esc(f.key)}: <b>${esc(f.value)}</b></span>`).join('')}</span>${i.note?`<button class="nb" data-note="${esc(k)}">nota</button>`:''}</div>${i.note?`<div class="inote fx ${openNotes.has(k)?'show':''}" id="n-${esc(k)}">${md(i.note)}</div>`:''}`;
+      return `<div class="it ${i.done?'done':''} ${!i.done && openDeps(i).length ? 'blk' : ''}" style="${i.level?'margin-left:22px':''}"><span class="ck"></span>${i.id?`<span class="id" data-id="${esc(i.id)}" title="Click to copy">${esc(i.id)}</span>`:''}<span class="tx">${inline(i.text)}${(i.tags||[]).map(t => `<span class="tg ${tagSel.has(t.toLowerCase())?'on':''}" data-tag="${esc(t.toLowerCase())}">${esc(t)}</span>`).join('')}${fieldOf(i, 'mode') ? `<span class="mb ${esc(fieldOf(i, 'mode'))}" title="${esc(fieldOf(i, 'mode_reason') || '')}">${fieldOf(i, 'mode') === 'isolated' ? 'isolated' : 'integrated'}</span>` : ''}${fieldOf(i, 'hold') && !fieldOf(i, 'deferred') ? `<span class="hd" data-qopen="${esc(i.id)}" style="cursor:pointer" title="${esc(fieldOf(i, 'hold'))}">waiting · answer</span>` : ''}${fieldOf(i, 'hold') && fieldOf(i, 'deferred') ? `<span class="df" data-qopen="${esc(i.id)}" style="cursor:pointer" title="${esc(fieldOf(i, 'hold'))}">deferred on ${esc(fieldOf(i, 'deferred'))}${fieldOf(i, 'defer_note') ? ' · ' + esc(fieldOf(i, 'defer_note')) : ''}</span>` : ''}${!i.done && !fieldOf(i, 'hold') && fieldOf(i, 'answer') ? `<span class="rs" title="Answer: ${esc(fieldOf(i, 'answer'))}">answer received</span>` : ''}${fieldOf(i, 'claimed_by') ? `<span class="cl">claimed by: ${esc(fieldOf(i, 'claimed_by'))}</span>` : ''}${(i.deps||[]).map(d => `<span class="dp ${byId.get(d)?.done ? 'ok' : ''}" data-q="${esc(d)}" title="${esc(byId.get(d)?.text || 'item not found')}">↳ ${esc(d)}</span>`).join('')}${!i.done && openDeps(i).length ? '<span class="bk">blocked</span>' : ''}${(i.fields||[]).filter(f => !/^(mode|mode_reason|deps_reason|hold|hold_options|hold_default|deferred|defer_note|answer|asked|answered_at|claimed_by)$/i.test(f.key)).map(f => `<span class="kv">${esc(f.key)}: <b>${esc(f.value)}</b></span>`).join('')}</span>${i.note?`<button class="nb" data-note="${esc(k)}">note</button>`:''}</div>${i.note?`<div class="inote fx ${openNotes.has(k)?'show':''}" id="n-${esc(k)}">${md(i.note)}</div>`:''}`;
     }).join('') : ''; }).join('');
-    const notes = s.notes.filter(n => !/^(obiettivo)$/i.test(n.title)).map(n => `<details class="n" ${openNotes.has(key+n.title)?'open':''} data-nk="${esc(key+n.title)}"><summary>${esc(n.title)}</summary>${md(n.body)}</details>`).join('');
-    const obj = s.notes.find(n => /^obiettivo$/i.test(n.title));
+    const notes = s.notes.filter(n => !/^(goal)$/i.test(n.title)).map(n => `<details class="n" ${openNotes.has(key+n.title)?'open':''} data-nk="${esc(key+n.title)}"><summary>${esc(n.title)}</summary>${md(n.body)}</details>`).join('');
+    const obj = s.notes.find(n => /^goal$/i.test(n.title));
     return `<section class="step ${isOpen?'open':''}" data-k="${esc(key)}">
-      <div class="sh"><span class="ch">▸</span><div class="nm"><b>${esc(title)}</b><small>${fase?esc(fase):''}${w.currentFile===s.file?(fase?' · ':'')+'attivo':''}</small></div>${pill(s.meta.stato)}<span class="mini">${bar(s.done,s.total)}</span><span class="cnt">${s.done}/${s.total}</span></div>
-      <div class="body">${obj && !filtering?`<div class="md" style="color:var(--mute);margin-bottom:8px">${md(obj.body)}</div>`:''}${items||`<div class="sub">${onlyOpen && s.total ? 'Tutte le voci completate.' : 'Nessuna voce in checklist.'}</div>`}${filtering ? '' : notes}</div></section>`;
+      <div class="sh"><span class="ch">▸</span><div class="nm"><b>${esc(title)}</b><small>${fase?esc(fase):''}${w.currentFile===s.file?(fase?' · ':'')+'active':''}</small></div>${pill(s.meta.status)}<span class="mini">${bar(s.done,s.total)}</span><span class="cnt">${s.done}/${s.total}</span></div>
+      <div class="body">${obj && !filtering?`<div class="md" style="color:var(--mute);margin-bottom:8px">${md(obj.body)}</div>`:''}${items||`<div class="sub">${onlyOpen && s.total ? 'All items completed.' : 'No checklist items.'}</div>`}${filtering ? '' : notes}</div></section>`;
   }).join('');
-  const upd = w.mtime ? new Date(w.mtime).toLocaleString('it-IT') : '';
+  const upd = w.mtime ? new Date(w.mtime).toLocaleString('en-US') : '';
   const scroll = scrollY, af = document.activeElement, hadQ = af && af.id === 'q', pos = hadQ ? af.selectionStart : 0;
   const chips = tagCount.size ? `<div class="chips">${[...tagCount].sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0])).map(([k, e]) => `<button class="tc ${tagSel.has(k)?'on':''}" data-tag="${esc(k)}">${esc(e.name)}<small>${e.n}</small></button>`).join('')}</div>` : '';
-  const toolbar = `<div class="bar2"><input id="q" type="search" placeholder="Cerca testo o codice…  ( / )" value="${esc(query)}" autocomplete="off"><label class="flt"><input type="checkbox" id="flt" ${onlyOpen?'checked':''}> Solo voci aperte</label>${hasGraph?`<select class="sel" id="sf" title="Stato rispetto alle dipendenze"><option value="all">Tutte</option><option value="ready" ${stateF==='ready'?'selected':''}>Pronte</option><option value="blocked" ${stateF==='blocked'?'selected':''}>Bloccate</option><option value="delegable" ${stateF==='delegable'?'selected':''}>Delegabili</option><option value="held" ${stateF==='held'?'selected':''}>In attesa</option><option value="deferred" ${stateF==='deferred'?'selected':''}>Rimandate</option><option value="claimed" ${stateF==='claimed'?'selected':''}>In carico</option></select><select class="sel" id="mf" title="Classificazione"><option value="all">Ogni modalità</option><option value="isolated" ${modeF==='isolated'?'selected':''}>Isolate</option><option value="integrated" ${modeF==='integrated'?'selected':''}>Integrate</option><option value="unset" ${modeF==='unset'?'selected':''}>Non classificate</option></select>`:''}${filtering?`<span class="res">${found} ${found===1?'voce':'voci'}</span><button class="lnk" id="clr">azzera</button>`:''}</div>${chips}`;
-  $('#main').innerHTML = `<div class="hrow"><h2 class="t">${esc(w.title)}</h2><div class="docs">${w.docs?.plan ? '<button class="db" data-open="plan">Piano</button>' : ''}${w.docs?.entrypoint ? '<button class="db" data-open="entrypoint">Entrypoint</button>' : ''}<button class="db qb ${pendingQ(w).length ? 'hot' : ''}" data-qopen="">Domande${pendingQ(w).length ? ' (' + pendingQ(w).length + ')' : ''}</button></div></div><div class="sub">${w.done} di ${w.total} voci completate · ${pct(w.done,w.total)}%${upd?' · aggiornato '+upd:''}<div style="max-width:320px">${bar(w.done,w.total)}</div></div>${toolbar}${nowHtml}${steps}${filtering && !found ? '<div class="empty" style="margin-top:12vh">Nessuna voce corrisponde ai filtri.</div>' : ''}`;
+  const toolbar = `<div class="bar2"><input id="q" type="search" placeholder="Search text or item ID…  ( / )" value="${esc(query)}" autocomplete="off"><label class="flt"><input type="checkbox" id="flt" ${onlyOpen?'checked':''}> Open items only</label>${hasGraph?`<select class="sel" id="sf" title="Dependency status"><option value="all">All</option><option value="ready" ${stateF==='ready'?'selected':''}>Ready</option><option value="blocked" ${stateF==='blocked'?'selected':''}>Blocked</option><option value="delegable" ${stateF==='delegable'?'selected':''}>Delegable</option><option value="held" ${stateF==='held'?'selected':''}>Waiting</option><option value="deferred" ${stateF==='deferred'?'selected':''}>Deferred</option><option value="claimed" ${stateF==='claimed'?'selected':''}>Claimed</option></select><select class="sel" id="mf" title="Classification"><option value="all">Any mode</option><option value="isolated" ${modeF==='isolated'?'selected':''}>Isolated</option><option value="integrated" ${modeF==='integrated'?'selected':''}>Integrated</option><option value="unset" ${modeF==='unset'?'selected':''}>Unclassified</option></select>`:''}${filtering?`<span class="res">${found} ${found===1?'item':'items'}</span><button class="lnk" id="clr">clear</button>`:''}</div>${chips}`;
+  $('#main').innerHTML = `<div class="hrow"><h2 class="t">${esc(w.title)}</h2><div class="docs">${w.docs?.plan ? '<button class="db" data-open="plan">Plan</button>' : ''}${w.docs?.entrypoint ? '<button class="db" data-open="entrypoint">Entrypoint</button>' : ''}<button class="db qb ${pendingQ(w).length ? 'hot' : ''}" data-qopen="">Questions${pendingQ(w).length ? ' (' + pendingQ(w).length + ')' : ''}</button></div></div><div class="sub">${w.done} of ${w.total} items completed · ${pct(w.done,w.total)}%${upd?' · updated '+upd:''}<div style="max-width:320px">${bar(w.done,w.total)}</div></div>${toolbar}${nowHtml}${steps}${filtering && !found ? '<div class="empty" style="margin-top:12vh">No items match the filters.</div>' : ''}`;
   scrollTo(0, scroll);
   if (hadQ) { const el = $('#q'); el.focus(); el.setSelectionRange(pos, pos); }
 }
@@ -439,7 +439,7 @@ function paintDoc(keepScroll) {
   art.innerHTML = mdDoc(doc.text, toc);
   $('#dv-toc').innerHTML = toc.map(t => `<a class="l${t.n}" data-go="${esc(t.id)}">${esc(t.t)}</a>`).join('');
   $('#dv-title').textContent = (curWork()?.title || '') + ' — ' + doc.kind + '.md';
-  $('#dv-meta').textContent = 'aggiornato ' + new Date(doc.mtime).toLocaleTimeString('it-IT');
+  $('#dv-meta').textContent = 'updated ' + new Date(doc.mtime).toLocaleTimeString('en-US');
   for (const k of ['plan', 'entrypoint']) {
     const b = $('#dvb-' + k); b.classList.toggle('on', doc.kind === k); b.hidden = !curWork()?.docs?.[k];
   }
@@ -469,11 +469,11 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#docv').hidden) closeDoc(); });
 
 
-// --- domande in attesa: risposte dalla dashboard (registrate con `wk reply`) ---
+// --- pending questions: risposte dalla dashboard (registrate con `wk reply`) ---
 const fld = (i, k) => (i.fields || []).find(f => f.key.toLowerCase() === k)?.value;
 const pendingQ = w => w.steps.flatMap(s => s.groups.flatMap(g => g.items.filter(i => !i.done && fld(i, 'hold') && !fld(i, 'deferred')).map(i => ({ i, s }))));
 const deferredQ = w => w.steps.flatMap(s => s.groups.flatMap(g => g.items.filter(i => !i.done && fld(i, 'hold') && fld(i, 'deferred')).map(i => ({ i, s }))));
-function blocksN(w, id) { // voci aperte ferme (anche indirettamente) finché id non è chiusa
+function blocksN(w, id) { // items aperte ferme (anche indirettamente) finché id non è chiusa
   const all = w.steps.flatMap(s => s.groups.flatMap(g => g.items)), seen = new Set(), q = [id];
   while (q.length) { const cur = q.shift(); for (const x of all) if (!x.done && x.id && !seen.has(x.id) && (x.deps || []).includes(cur)) { seen.add(x.id); q.push(x.id); } }
   return seen.size;
@@ -484,29 +484,29 @@ function paintQ(force) {
   const w = curWork(), list = $('#q-list'); if (!w) return;
   const items = pendingQ(w), dfr = deferredQ(w);
   const sig = w.id + '|' + items.map(x => x.i.id + fld(x.i, 'hold') + (fld(x.i, 'hold_options') || '')).join('§') + '¦' + dfr.map(x => x.i.id + fld(x.i, 'deferred') + (fld(x.i, 'defer_note') || '')).join('§');
-  $('#qv-title').textContent = items.length ? `Domande in attesa · ${items.length}` : 'Domande in attesa';
-  $('#qv-notif').textContent = 'Avvisi: ' + (qNotif && Notification.permission === 'granted' ? 'sì' : 'no');
+  $('#qv-title').textContent = items.length ? `Pending questions · ${items.length}` : 'Pending questions';
+  $('#qv-notif').textContent = 'Notifications: ' + (qNotif && Notification.permission === 'granted' ? 'on' : 'off');
   if (!force && sig === qSig) return;
   qSig = sig;
-  const info = `<p class="q-info">L'agente continua a lavorare sulle altre voci: appena rispondi, la voce torna disponibile e la riprende da sola.</p>`;
-  const dHtml = dfr.length ? `<div class="qdh">Rimandate · ${dfr.length}</div>` + dfr.map(({ i, s }) => {
+  const info = `<p class="q-info">The agent continues with other items. Once you answer, it can automatically resume this item.</p>`;
+  const dHtml = dfr.length ? `<div class="qdh">Deferred · ${dfr.length}</div>` + dfr.map(({ i, s }) => {
     const n = blocksN(w, i.id);
     return `<div class="qc dfr" data-qid="${esc(i.id)}">
       <div class="qh"><span class="id">${esc(i.id)}</span><span class="fx">${esc(s.title.replace(/^Step\s+\d+\s*[—-]\s*/i, ''))} · ${inline(i.text)}</span></div>
       <div class="qq fx">${inl(fld(i, 'hold'))}</div>
-      <div class="qm">Rimandata il ${esc(fld(i, 'deferred'))}${fld(i, 'defer_note') ? ' · ' + esc(fld(i, 'defer_note')) : ''}${n ? ` · ferma ${n} ${n === 1 ? 'voce' : 'voci'}` : ''}</div>
-      <div class="qa"><input type="text" placeholder="Rispondi ora…" value="${esc(qDraft[i.id] || '')}" data-qin="${esc(i.id)}"><button class="db go" data-qsend>Invia</button><button class="db" data-qundefer>Riporta in coda</button></div>
+      <div class="qm">Deferred on ${esc(fld(i, 'deferred'))}${fld(i, 'defer_note') ? ' · ' + esc(fld(i, 'defer_note')) : ''}${n ? ` · blocks ${n} ${n === 1 ? 'item' : 'items'}` : ''}</div>
+      <div class="qa"><input type="text" placeholder="Answer now…" value="${esc(qDraft[i.id] || '')}" data-qin="${esc(i.id)}"><button class="db go" data-qsend>Send</button><button class="db" data-qundefer>Return to queue</button></div>
       <div class="qe" hidden></div></div>`;
   }).join('') : '';
-  if (!items.length) { list.innerHTML = info + '<div class="sub">Nessuna domanda da rispondere.</div>' + dHtml; return; }
+  if (!items.length) { list.innerHTML = info + '<div class="sub">No questions to answer.</div>' + dHtml; return; }
   list.innerHTML = info + items.map(({ i, s }) => {
     const opts = (fld(i, 'hold_options') || '').split(' | ').map(x => x.trim()).filter(Boolean), def = fld(i, 'hold_default');
     return `<div class="qc ${qNew.has(i.id) ? 'new' : ''}" data-qid="${esc(i.id)}">
       <div class="qh"><span class="id">${esc(i.id)}</span><span class="fx">${esc(s.title.replace(/^Step\s+\d+\s*[—-]\s*/i, ''))} · ${inline(i.text)}</span></div>
       <div class="qq fx">${inl(fld(i, 'hold'))}</div>
-      ${opts.length ? `<div class="qo">${opts.map(o => `<button class="opt ${def === o ? 'def' : ''}" data-qopt="${esc(o)}">${esc(o)}${def === o ? ' · proposta' : ''}</button>`).join('')}</div>` : ''}
-      <div class="qa"><input type="text" placeholder="${opts.length ? 'Oppure scrivi un’altra risposta…' : 'Scrivi la risposta…'}" value="${esc(qDraft[i.id] || '')}" data-qin="${esc(i.id)}"><button class="db go" data-qsend>Invia</button>${def && !opts.length ? `<button class="db" data-qopt="${esc(def)}">Usa la proposta: ${esc(def)}</button>` : ''}<button class="db" data-qdefer title="Toglie la domanda dalla coda senza rispondere">Rimanda</button></div>
-      <div class="qd" hidden><input type="text" placeholder="Cosa aspetti? (facoltativo)" data-qnote="${esc(i.id)}"><button class="db go" data-qdefer-ok>Conferma rinvio</button></div>
+      ${opts.length ? `<div class="qo">${opts.map(o => `<button class="opt ${def === o ? 'def' : ''}" data-qopt="${esc(o)}">${esc(o)}${def === o ? ' · suggested' : ''}</button>`).join('')}</div>` : ''}
+      <div class="qa"><input type="text" placeholder="${opts.length ? 'Or enter another answer…' : 'Enter an answer…'}" value="${esc(qDraft[i.id] || '')}" data-qin="${esc(i.id)}"><button class="db go" data-qsend>Send</button>${def && !opts.length ? `<button class="db" data-qopt="${esc(def)}">Use suggestion: ${esc(def)}</button>` : ''}<button class="db" data-qdefer title="Removes the question from the queue without answering">Defer</button></div>
+      <div class="qd" hidden><input type="text" placeholder="What needs to happen first? (optional)" data-qnote="${esc(i.id)}"><button class="db go" data-qdefer-ok>Confirm deferral</button></div>
       <div class="qe" hidden></div></div>`;
   }).join('') + dHtml;
 }
@@ -524,7 +524,7 @@ async function sendAnswer(card, answer) {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || r.status);
     delete qDraft[id]; await load();
-  } catch (e) { card.classList.remove('sent'); err.textContent = 'Non registrata: ' + e.message; err.hidden = false; }
+  } catch (e) { card.classList.remove('sent'); err.textContent = 'Could not save: ' + e.message; err.hidden = false; }
 }
 async function postQ(card, path, extra) {
   const id = card.dataset.qid, err = card.querySelector('.qe');
@@ -534,7 +534,7 @@ async function postQ(card, path, extra) {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || r.status);
     await load();
-  } catch (e) { card.classList.remove('sent'); err.textContent = 'Non registrata: ' + e.message; err.hidden = false; }
+  } catch (e) { card.classList.remove('sent'); err.textContent = 'Could not save: ' + e.message; err.hidden = false; }
 }
 function checkNewQuestions() {
   const all = allWorks().flatMap(w => pendingQ(w).map(x => ({ id: x.i.id, q: fld(x.i, 'hold'), w: w.title })));
@@ -543,7 +543,7 @@ function checkNewQuestions() {
     const fresh = all.filter(x => !qSeen.has(x.id));
     fresh.forEach(x => qNew.add(x.id));
     if (fresh.length && qNotif && 'Notification' in window && Notification.permission === 'granted') {
-      try { new Notification(fresh.length === 1 ? 'Nuova domanda dall’agente' : `${fresh.length} nuove domande dall’agente`, { body: fresh.map(x => x.q).join('\n').slice(0, 200) }); } catch {}
+      try { new Notification(fresh.length === 1 ? 'New question from the agent' : `${fresh.length} new questions from the agent`, { body: fresh.map(x => x.q).join('\n').slice(0, 200) }); } catch {}
     }
   }
   qSeen = ids; qInit = true;
@@ -575,7 +575,7 @@ document.addEventListener('keydown', e => {
 let paths = [];
 async function showCfg(){
   paths = (await (await fetch('/api/config')).json()).paths;
-  $('#plist').innerHTML = paths.length ? paths.map((p,i) => `<div class="pr"><code>${esc(p)}</code><button class="s" data-rm="${i}">Rimuovi</button></div>`).join('') : '<p>Nessun percorso configurato.</p>';
+  $('#plist').innerHTML = paths.length ? paths.map((p,i) => `<div class="pr"><code>${esc(p)}</code><button class="s" data-rm="${i}">Remove</button></div>`).join('') : '<p>No paths configured.</p>';
 }
 async function savePaths(){
   await fetch('/api/config', { method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({ paths }) });

@@ -24,7 +24,7 @@ fn warn(comptime fmt: []const u8, args: anytype) void {
 const UserError = error{User};
 
 fn fail(comptime fmt: []const u8, args: anytype) UserError {
-    g_msg = std.fmt.allocPrint(g_a, fmt, args) catch "memoria esaurita";
+    g_msg = std.fmt.allocPrint(g_a, fmt, args) catch "out of memory";
     return error.User;
 }
 
@@ -105,7 +105,7 @@ fn parseWhere(s: []const u8) !Where {
         if (c == '~') return .{ .key = W.trim(s[0..i]), .op = .contains, .value = W.trim(s[i + 1 ..]) };
         if (c == '!' and i + 1 < s.len and s[i + 1] == '=') return .{ .key = W.trim(s[0..i]), .op = .ne, .value = W.trim(s[i + 2 ..]) };
     }
-    return fail("--where '{s}': usa chiave=valore, chiave!=valore oppure chiave~valore", .{s});
+    return fail("--where '{s}': use key=value, key!=value, or key~value", .{s});
 }
 
 fn parseOpts(a: std.mem.Allocator, cmd: []const u8, args: []const []const u8) !Opts {
@@ -134,7 +134,7 @@ fn parseOpts(a: std.mem.Allocator, cmd: []const u8, args: []const []const u8) !O
                 arg = arg[0..e];
             }
         }
-        const name = if (std.mem.startsWith(u8, arg, "--")) arg[2..] else if (std.mem.eql(u8, arg, "-w")) "work" else if (std.mem.eql(u8, arg, "-h")) "help" else return fail("opzione sconosciuta: {s} (vedi `wk {s} --help`)", .{ arg, cmd });
+        const name = if (std.mem.startsWith(u8, arg, "--")) arg[2..] else if (std.mem.eql(u8, arg, "-w")) "work" else if (std.mem.eql(u8, arg, "-h")) "help" else return fail("unknown option: {s} (see `wk {s} --help`)", .{ arg, cmd });
 
         // booleane
         if (std.mem.eql(u8, name, "desc")) { o.desc = true; continue; }
@@ -167,7 +167,7 @@ fn parseOpts(a: std.mem.Allocator, cmd: []const u8, args: []const []const u8) !O
 
         const val: []const u8 = inline_val orelse blk: {
             i += 1;
-            if (i >= args.len) return fail("--{s} richiede un valore", .{name});
+            if (i >= args.len) return fail("--{s} requires a value", .{name});
             break :blk args[i];
         };
         if (std.mem.eql(u8, name, "work")) o.work = val
@@ -184,14 +184,14 @@ fn parseOpts(a: std.mem.Allocator, cmd: []const u8, args: []const []const u8) !O
         else if (std.mem.eql(u8, name, "id")) o.id = val
         else if (std.mem.eql(u8, name, "after")) o.after = val
         else if (std.mem.eql(u8, name, "title")) o.title = val
-        else if (std.mem.eql(u8, name, "depth")) o.depth = std.fmt.parseInt(usize, val, 10) catch return fail("--depth: numero non valido '{s}'", .{val})
+        else if (std.mem.eql(u8, name, "depth")) o.depth = std.fmt.parseInt(usize, val, 10) catch return fail("--depth: invalid number '{s}'", .{val})
         else if (std.mem.eql(u8, name, "deps")) {
-            if (!(std.mem.eql(u8, val, "all-done") or std.mem.eql(u8, val, "some-done") or std.mem.eql(u8, val, "none-done"))) return fail("--deps: usa all-done, some-done o none-done", .{});
+            if (!(std.mem.eql(u8, val, "all-done") or std.mem.eql(u8, val, "some-done") or std.mem.eql(u8, val, "none-done"))) return fail("--deps: use all-done, some-done, or none-done", .{});
             o.deps_state = val;
         } else if (std.mem.eql(u8, name, "needs")) o.needs = val
         else if (std.mem.eql(u8, name, "needed-by")) o.needed_by = val
         else if (std.mem.eql(u8, name, "mode")) {
-            if (!(std.mem.eql(u8, val, "isolated") or std.mem.eql(u8, val, "integrated") or std.mem.eql(u8, val, "unset"))) return fail("--mode: usa isolated, integrated o unset", .{});
+            if (!(std.mem.eql(u8, val, "isolated") or std.mem.eql(u8, val, "integrated") or std.mem.eql(u8, val, "unset"))) return fail("--mode: use isolated, integrated, or unset", .{});
             o.mode = val;
         } else if (std.mem.eql(u8, name, "reason")) o.reason = val
         else if (std.mem.eql(u8, name, "phase")) o.phase = val
@@ -203,13 +203,13 @@ fn parseOpts(a: std.mem.Allocator, cmd: []const u8, args: []const []const u8) !O
         else if (std.mem.eql(u8, name, "note")) o.note = val
         else if (std.mem.eql(u8, name, "option")) try o.options.append(a, val)
         else if (std.mem.eql(u8, name, "default")) o.default_answer = val
-        else if (std.mem.eql(u8, name, "wait")) o.wait_min = std.fmt.parseInt(u32, val, 10) catch return fail("--wait: numero di minuti non valido '{s}'", .{val})
-        else if (std.mem.eql(u8, name, "timeout")) o.timeout = std.fmt.parseInt(u32, val, 10) catch return fail("--timeout: numero di secondi non valido '{s}'", .{val})
-        else if (std.mem.eql(u8, name, "from")) o.from = std.fmt.parseInt(u32, val, 10) catch return fail("--from: numero non valido '{s}'", .{val})
-        else if (std.mem.eql(u8, name, "limit")) o.limit = std.fmt.parseInt(usize, val, 10) catch return fail("--limit: numero non valido '{s}'", .{val})
+        else if (std.mem.eql(u8, name, "wait")) o.wait_min = std.fmt.parseInt(u32, val, 10) catch return fail("--wait: invalid number of minutes '{s}'", .{val})
+        else if (std.mem.eql(u8, name, "timeout")) o.timeout = std.fmt.parseInt(u32, val, 10) catch return fail("--timeout: invalid number of seconds '{s}'", .{val})
+        else if (std.mem.eql(u8, name, "from")) o.from = std.fmt.parseInt(u32, val, 10) catch return fail("--from: invalid number '{s}'", .{val})
+        else if (std.mem.eql(u8, name, "limit")) o.limit = std.fmt.parseInt(usize, val, 10) catch return fail("--limit: invalid number '{s}'", .{val})
         else if (std.mem.eql(u8, name, "format")) {
-            o.format = std.meta.stringToEnum(O.Format, val) orelse return fail("--format: usa json, text o ids", .{});
-        } else return fail("opzione sconosciuta: --{s} (vedi `wk {s} --help`)", .{ name, cmd });
+            o.format = std.meta.stringToEnum(O.Format, val) orelse return fail("--format: use json, text, or ids", .{});
+        } else return fail("unknown option: --{s} (see `wk {s} --help`)", .{ name, cmd });
     }
     return o;
 }
@@ -249,7 +249,7 @@ fn pickOne(a: std.mem.Allocator, found: List, where: []const u8) !?[]const u8 {
     if (found.items.len == 0) return null;
     var b: std.ArrayList(u8) = .empty;
     for (found.items) |p| try b.print(a, "\n  {s}", .{p});
-    return fail("più work in {s}, indica quale con --work DIR:{s}", .{ where, b.items });
+    return fail("multiple works in {s}; select one with --work DIR:{s}", .{ where, b.items });
 }
 
 fn resolveWork(a: std.mem.Allocator, o: *const Opts) ![]const u8 {
@@ -259,7 +259,7 @@ fn resolveWork(a: std.mem.Allocator, o: *const Opts) ![]const u8 {
         if (try pickOne(a, try worksIn(a, p), p)) |x| return x;
         const sub = try std.fs.path.join(a, &.{ p, ".work" });
         if (try pickOne(a, try worksIn(a, sub), sub)) |x| return x;
-        return fail("nessun work in '{s}' (cercati tasks-*.md). Per crearne uno: wk init DIR", .{p});
+        return fail("no work in '{s}' (looked for tasks-*.md). Create one with: wk init DIR", .{p});
     }
     var cur: []const u8 = try rt.realpathAlloc(a, ".");
     while (true) {
@@ -272,7 +272,7 @@ fn resolveWork(a: std.mem.Allocator, o: *const Opts) ![]const u8 {
         if (parent.len == cur.len) break;
         cur = parent;
     }
-    return fail("nessun work trovato dalla directory corrente. Usa --work DIR, $WK_WORK oppure `wk init DIR`", .{});
+    return fail("no work found from the current directory. Use --work DIR, $WK_WORK, or `wk init DIR`", .{});
 }
 
 /// Carica il work verificando la versione dei documenti dichiarata nell'entrypoint.
@@ -280,8 +280,8 @@ fn loadWork(a: std.mem.Allocator, o: *const Opts) !W.Work {
     const w = try loadWorkRaw(a, o);
     if (try E.Entry.load(a, w.dir)) |e| {
         const v = e.formatVersion() orelse 0;
-        if (v > F.current) return fail("il work usa il formato documenti {d}, ma questo wk arriva alla {d}: aggiorna wk.", .{ v, F.current });
-        if (v < F.current) warn("formato documenti {d} (wk è alla {d}): esegui `wk migrate --from {d}` prima di proseguire.", .{ v, F.current, v });
+        if (v > F.current) return fail("work uses document format {d}, but this wk supports up to {d}: update wk.", .{ v, F.current });
+        if (v < F.current) warn("document format {d} (wk supports {d}): run `wk migrate --from {d}` before continuing.", .{ v, F.current, v });
     }
     return w;
 }
@@ -297,7 +297,7 @@ const max_question: usize = 700;
 /// I testi scritti nei documenti restano brevi: i dettagli vanno in un file del repository.
 fn checkLen(key: []const u8, val: []const u8, max: usize) !void {
     if (g_long or val.len <= max) return;
-    return fail("'{s}' è di {d} caratteri (max {d}): sintetizza (esito, riferimento, prossimo passo). I dettagli vanno in un file del repository, qui solo il percorso (es. {s}_file=docs/…). Solo se indispensabile: --long", .{ key, val.len, max, key });
+    return fail("'{s}' has {d} characters (max {d}): summarize the outcome, reference, and next step. Put details in a repository file and include its path (e.g. {s}_file=docs/…). Use --long only when necessary", .{ key, val.len, max, key });
 }
 var g_lock_dir: ?rt.Dir = null;
 
@@ -317,7 +317,7 @@ fn lockWork(dir: []const u8) !void {
         if (!got) {
             if (tries >= 600) {
                 d.close(rt.io);
-                return fail("il work è occupato da un altro comando wk (lock) da oltre 30 secondi", .{});
+                return fail("work has been locked by another wk command for over 30 seconds", .{});
             }
             rt.sleepMs(50);
             continue;
@@ -341,7 +341,7 @@ fn needsLock(cmd: []const u8, o: *const Opts) bool {
 fn loadWorkRaw(a: std.mem.Allocator, o: *const Opts) !W.Work {
     const dir = try resolveWork(a, o);
     if (g_lock) try lockWork(dir);
-    return W.load(a, dir) catch |e| return fail("lettura di '{s}' fallita: {s}", .{ dir, @errorName(e) });
+    return W.load(a, dir) catch |e| return fail("failed to read '{s}': {s}", .{ dir, @errorName(e) });
 }
 
 // ------------------------------------------------------------ filters
@@ -477,7 +477,7 @@ const SortCtx = struct {
 fn resolveSteps(a: std.mem.Allocator, w: *const W.Work, o: *const Opts) ![]usize {
     var res: std.ArrayList(usize) = .empty;
     for (o.steps.items) |s| {
-        const i = W.findStep(w, s) orelse return fail("step '{s}' non trovato (vedi `wk steps`)", .{s});
+        const i = W.findStep(w, s) orelse return fail("step '{s}' not found (see `wk steps`)", .{s});
         try res.append(a, i);
     }
     return res.items;
@@ -515,16 +515,16 @@ fn viewOf(a: std.mem.Allocator, o: *const Opts) !O.View {
 const Ctx = struct { a: std.mem.Allocator, out: *std.Io.Writer };
 
 fn needId(o: *const Opts, cmd: []const u8) ![]const u8 {
-    if (o.pos.items.len < 1) return fail("manca l'ID (vedi `wk {s} --help`)", .{cmd});
+    if (o.pos.items.len < 1) return fail("missing ID (see `wk {s} --help`)", .{cmd});
     return o.pos.items[0];
 }
 
 fn needItem(w: *const W.Work, id: []const u8) !W.ItemRef {
-    return W.findItem(w, id) orelse fail("voce '{s}' non trovata", .{id});
+    return W.findItem(w, id) orelse fail("item '{s}' not found", .{id});
 }
 
 fn noNewline(s: []const u8, what: []const u8) !void {
-    if (std.mem.indexOfAny(u8, s, "\r\n") != null) return fail("{s}: non può contenere a capo", .{what});
+    if (std.mem.indexOfAny(u8, s, "\r\n") != null) return fail("{s}: cannot contain newlines", .{what});
 }
 
 fn cmdSteps(c: Ctx, o: *const Opts) !void {
@@ -548,7 +548,7 @@ fn cmdSteps(c: Ctx, o: *const Opts) !void {
             for (s.items) |it| if (it.done) { d += 1; };
             try out.print("{s: <10} {d: >3}/{d: <3} {s: <12} {s}\n", .{ s.key, d, s.items.len, s.status, s.title });
         }
-        try out.print("totale: {d}/{d}\ndisponibili {d} · bloccate {d} · in attesa {d} · rimandate {d} · in carico {d} · delegabili {d}\n", .{ done, total, n_avail, n_blocked, n_held, cnt.deferred, n_claimed, n_deleg });
+        try out.print("total: {d}/{d}\navailable {d} · blocked {d} · waiting {d} · deferred {d} · claimed {d} · delegable {d}\n", .{ done, total, n_avail, n_blocked, n_held, cnt.deferred, n_claimed, n_deleg });
         return;
     }
     try out.writeAll("{\"work\":");
@@ -622,7 +622,7 @@ fn cmdList(c: Ctx, o: *const Opts, next: bool) !void {
                     try O.jstr(c.out, hint);
                     try c.out.writeAll("}\n");
                 },
-                .text => try c.out.print("nessuna voce disponibile ({s}): aperte {d}, bloccate {d}, in attesa {d}, in carico {d}{s}{s}\n", .{ reason, refs.len, n_blocked, n_held, n_claimed, if (hint.len > 0) " — " else "", hint }),
+                .text => try c.out.print("no item available ({s}): open {d}, blocked {d}, waiting {d}, claimed {d}{s}{s}\n", .{ reason, refs.len, n_blocked, n_held, n_claimed, if (hint.len > 0) " — " else "", hint }),
                 .ids => {},
             }
             return;
@@ -714,7 +714,7 @@ fn cmdTags(c: Ctx, o: *const Opts) !void {
     const w = try loadWork(c.a, o);
     const rows = try tagRows(c.a, &w, try collect(c.a, &w, o, false));
     if (o.format == .text or o.format == .ids) {
-        for (rows) |r| if (o.format == .ids) try c.out.print("{s}\n", .{r.tag}) else try c.out.print("{s: <20} {d} ({d} aperte)\n", .{ r.tag, r.count, r.open });
+        for (rows) |r| if (o.format == .ids) try c.out.print("{s}\n", .{r.tag}) else try c.out.print("{s: <20} {d} ({d} open)\n", .{ r.tag, r.count, r.open });
         return;
     }
     try c.out.writeAll("{\"tags\":[");
@@ -737,7 +737,7 @@ fn cmdKeys(c: Ctx, o: *const Opts) !void {
                 try c.out.print("{s}\n", .{r.key});
                 continue;
             }
-            try c.out.print("{s: <16} {d} voci, {d} valori: ", .{ r.key, r.count, r.vals.items.len });
+            try c.out.print("{s: <16} {d} items, {d} values: ", .{ r.key, r.count, r.vals.items.len });
             for (r.vals.items[0..@min(max_vals, r.vals.items.len)], 0..) |v, i| try c.out.print("{s}{s}", .{ if (i > 0) ", " else "", v.v });
             try c.out.writeByte('\n');
         }
@@ -786,11 +786,11 @@ fn printUpdated(c: Ctx, w: *const W.Work, ids: []const []const u8, o: *const Opt
 
 fn setDone(c: Ctx, o: *const Opts, done: bool, cmd: []const u8) !void {
     var w = try loadWork(c.a, o);
-    if (o.pos.items.len == 0) return fail("manca almeno un ID (vedi `wk {s} --help`)", .{cmd});
-    if (!done and o.result != null) return fail("--result vale solo con `check`", .{});
+    if (o.pos.items.len == 0) return fail("at least one ID is required (see `wk {s} --help`)", .{cmd});
+    if (!done and o.result != null) return fail("--result is only valid with `check`", .{});
     if (o.result) |rs| {
         try noNewline(rs, "--result");
-        if (W.trim(rs).len == 0) return fail("--result vuoto", .{});
+        if (W.trim(rs).len == 0) return fail("empty --result", .{});
     }
     for (o.pos.items) |id| _ = try needItem(&w, id);
     for (o.pos.items) |id| {
@@ -800,7 +800,7 @@ fn setDone(c: Ctx, o: *const Opts, done: bool, cmd: []const u8) !void {
         if (done) {
             if (!it.done) {
                 const od = try G.openDeps(c.a, &w, it);
-                if (od.len > 0) warn("{s} ha dipendenze ancora aperte: {s}. Completata comunque (vedi `wk deps {s}`).", .{ id, try joinTags(c.a, od), id });
+                if (od.len > 0) warn("{s} still has open dependencies: {s}. Marked complete anyway (see `wk deps {s}`).", .{ id, try joinTags(c.a, od), id });
             }
             try dropField(c.a, &it, "claimed_by");
             try dropField(c.a, &it, "hold");
@@ -867,7 +867,7 @@ fn canonTags(a: std.mem.Allocator, w: *const W.Work, tags: []const []const u8) !
             try out.append(a, c);
         } else {
             try out.append(a, t);
-            if (existing.len > 0) warn("tag nuovo '{s}'. Tag esistenti: {s}. Se è lo stesso concetto usa quello esistente (vedi `wk tags`).", .{ t, listExisting(a, null, existing) });
+            if (existing.len > 0) warn("new tag '{s}'. Existing tags: {s}. Reuse an existing tag for the same concept (see `wk tags`).", .{ t, listExisting(a, null, existing) });
         }
     }
     return out.items;
@@ -875,11 +875,11 @@ fn canonTags(a: std.mem.Allocator, w: *const W.Work, tags: []const []const u8) !
 
 fn mergeSet(a: std.mem.Allocator, w: *const W.Work, it: *W.Item, kv_in: []const u8) !void {
     const kv = kv_in;
-    const e = std.mem.indexOfScalar(u8, kv, '=') orelse return fail("'{s}': usa chiave=valore", .{kv});
+    const e = std.mem.indexOfScalar(u8, kv, '=') orelse return fail("'{s}': use key=value", .{kv});
     const key = W.trim(kv[0..e]);
     const val = W.trim(kv[e + 1 ..]);
-    if (!W.validKey(key)) return fail("chiave '{s}' non valida (ammessi: lettere, cifre, _ e -)", .{key});
-    if (val.len == 0) return fail("'{s}': valore vuoto (usa `wk unset` per rimuovere)", .{key});
+    if (!W.validKey(key)) return fail("invalid key '{s}' (allowed: letters, digits, _, and -)", .{key});
+    if (val.len == 0) return fail("'{s}': empty value (use `wk unset` to remove)", .{key});
     try noNewline(val, key);
     try checkLen(key, val, max_field);
     if (std.ascii.eqlIgnoreCase(key, "tags")) {
@@ -888,18 +888,18 @@ fn mergeSet(a: std.mem.Allocator, w: *const W.Work, it: *W.Item, kv_in: []const 
         it.tags = try canonTags(a, w, l.items);
         return;
     }
-    if (std.ascii.eqlIgnoreCase(key, "deps") or std.ascii.eqlIgnoreCase(key, "deps_reason")) return fail("'{s}' si gestisce con `wk dep add|rm|set`", .{key});
-    if (std.ascii.eqlIgnoreCase(key, "mode") or std.ascii.eqlIgnoreCase(key, "mode_reason")) return fail("'{s}' si gestisce con `wk classify`", .{key});
-    if (std.ascii.eqlIgnoreCase(key, "hold") or std.ascii.eqlIgnoreCase(key, "answer") or std.ascii.eqlIgnoreCase(key, "asked") or std.ascii.eqlIgnoreCase(key, "hold_options") or std.ascii.eqlIgnoreCase(key, "hold_default") or std.ascii.eqlIgnoreCase(key, "answered_at")) return fail("'{s}' si gestisce con `wk hold` / `wk resolve` / `wk reply`", .{key});
-    if (std.ascii.eqlIgnoreCase(key, "deferred") or std.ascii.eqlIgnoreCase(key, "defer_note")) return fail("'{s}' si gestisce con `wk defer` / `wk undefer`", .{key});
-    if (std.ascii.eqlIgnoreCase(key, "claimed_by")) return fail("'claimed_by' si gestisce con `wk claim` / `wk unclaim`", .{});
-    for (W.reserved_keys) |r| if (std.ascii.eqlIgnoreCase(r, key)) return fail("'{s}' è una chiave riservata", .{key});
+    if (std.ascii.eqlIgnoreCase(key, "deps") or std.ascii.eqlIgnoreCase(key, "deps_reason")) return fail("'{s}' is managed with `wk dep add|rm|set`", .{key});
+    if (std.ascii.eqlIgnoreCase(key, "mode") or std.ascii.eqlIgnoreCase(key, "mode_reason")) return fail("'{s}' is managed with `wk classify`", .{key});
+    if (std.ascii.eqlIgnoreCase(key, "hold") or std.ascii.eqlIgnoreCase(key, "answer") or std.ascii.eqlIgnoreCase(key, "asked") or std.ascii.eqlIgnoreCase(key, "hold_options") or std.ascii.eqlIgnoreCase(key, "hold_default") or std.ascii.eqlIgnoreCase(key, "answered_at")) return fail("'{s}' is managed with `wk hold` / `wk resolve` / `wk reply`", .{key});
+    if (std.ascii.eqlIgnoreCase(key, "deferred") or std.ascii.eqlIgnoreCase(key, "defer_note")) return fail("'{s}' is managed with `wk defer` / `wk undefer`", .{key});
+    if (std.ascii.eqlIgnoreCase(key, "claimed_by")) return fail("'claimed_by' is managed with `wk claim` / `wk unclaim`", .{});
+    for (W.reserved_keys) |r| if (std.ascii.eqlIgnoreCase(r, key)) return fail("'{s}' is a reserved key", .{key});
     var use_key = key;
     if (canonKey(w, key)) |ck| {
         use_key = ck;
     } else {
         const rows = try keyRows(a, w, try allRefs(a, w));
-        if (rows.len > 0) warn("chiave nuova '{s}'. Chiavi esistenti: {s}. Se è la stessa informazione usa quella esistente (vedi `wk keys`).", .{ key, listExisting(a, rows, null) });
+        if (rows.len > 0) warn("new key '{s}'. Existing keys: {s}. Reuse an existing key for the same information (see `wk keys`).", .{ key, listExisting(a, rows, null) });
     }
     var fl: std.ArrayList(W.Field) = .empty;
     var replaced = false;
@@ -917,7 +917,7 @@ fn cmdSet(c: Ctx, o: *const Opts) !void {
     var w = try loadWork(c.a, o);
     const id = try needId(o, "set");
     const r = try needItem(&w, id);
-    if (o.pos.items.len < 2) return fail("manca chiave=valore (vedi `wk set --help`)", .{});
+    if (o.pos.items.len < 2) return fail("missing key=value (see `wk set --help`)", .{});
     var it = W.item(&w, r).*;
     for (o.pos.items[1..]) |kv| try mergeSet(c.a, &w, &it, kv);
     try W.commitItem(c.a, &w, r, it);
@@ -929,7 +929,7 @@ fn cmdUnset(c: Ctx, o: *const Opts) !void {
     var w = try loadWork(c.a, o);
     const id = try needId(o, "unset");
     const r = try needItem(&w, id);
-    if (o.pos.items.len < 2) return fail("manca la chiave da rimuovere", .{});
+    if (o.pos.items.len < 2) return fail("missing key to remove", .{});
     var it = W.item(&w, r).*;
     for (o.pos.items[1..]) |key| {
         if (std.ascii.eqlIgnoreCase(key, "tags")) {
@@ -953,7 +953,7 @@ fn cmdTag(c: Ctx, o: *const Opts) !void {
     var w = try loadWork(c.a, o);
     const id = try needId(o, "tag");
     const r = try needItem(&w, id);
-    if (o.pos.items.len < 2) return fail("indica i tag: +nuovo -vecchio (vedi `wk tag --help`)", .{});
+    if (o.pos.items.len < 2) return fail("specify tags: +new -old (see `wk tag --help`)", .{});
     var it = W.item(&w, r).*;
     var tags: List = .empty;
     try tags.appendSlice(c.a, it.tags);
@@ -982,9 +982,9 @@ fn cmdEdit(c: Ctx, o: *const Opts) !void {
     var w = try loadWork(c.a, o);
     const id = try needId(o, "edit");
     const r = try needItem(&w, id);
-    const label = o.label orelse return fail("manca --label", .{});
-    if (W.trim(label).len == 0) return fail("l'etichetta non può essere vuota", .{});
-    try noNewline(label, "etichetta");
+    const label = o.label orelse return fail("missing --label", .{});
+    if (W.trim(label).len == 0) return fail("label cannot be empty", .{});
+    try noNewline(label, "label");
     try checkLen("label", W.trim(label), max_label);
     var it = W.item(&w, r).*;
     it.label = W.trim(label);
@@ -995,7 +995,7 @@ fn cmdEdit(c: Ctx, o: *const Opts) !void {
 
 fn cmdRm(c: Ctx, o: *const Opts) !void {
     var w = try loadWork(c.a, o);
-    if (o.pos.items.len == 0) return fail("manca almeno un ID", .{});
+    if (o.pos.items.len == 0) return fail("at least one ID is required", .{});
     for (o.pos.items) |id| _ = try needItem(&w, id);
     for (o.pos.items) |id| {
         for (try G.dependents(c.a, &w, id)) |dr| {
@@ -1005,7 +1005,7 @@ fn cmdRm(c: Ctx, o: *const Opts) !void {
                 leaving = true;
             };
             if (leaving) continue;
-            if (!o.force) return fail("'{s}' è una dipendenza di {s} (\"{s}\"). Usa --force per rimuoverla anche da lì, o `wk dep rm`.", .{ id, dit.id, dit.label });
+            if (!o.force) return fail("'{s}' is a dependency of {s} (\"{s}\"). Use --force to remove that dependency too, or `wk dep rm`.", .{ id, dit.id, dit.label });
             var nd: List = .empty;
             for (dit.deps) |d| if (!std.mem.eql(u8, d, id)) try nd.append(c.a, d);
             var it2 = dit;
@@ -1025,36 +1025,36 @@ fn cmdRm(c: Ctx, o: *const Opts) !void {
 
 fn cmdAdd(c: Ctx, o: *const Opts) !void {
     var w = try loadWork(c.a, o);
-    if (w.steps.len == 0) return fail("il work non ha step: usa `wk new-step`", .{});
-    if (o.pos.items.len == 0) return fail("manca l'etichetta: wk add --step S \"testo\"", .{});
+    if (w.steps.len == 0) return fail("work has no steps: use `wk new-step`", .{});
+    if (o.pos.items.len == 0) return fail("missing label: wk add --step S \"text\"", .{});
     var lb: std.ArrayList(u8) = .empty;
     for (o.pos.items, 0..) |p, i| {
         if (i > 0) try lb.append(c.a, ' ');
         try lb.appendSlice(c.a, p);
     }
     const label = W.trim(lb.items);
-    if (label.len == 0) return fail("l'etichetta non può essere vuota", .{});
-    try noNewline(label, "etichetta");
+    if (label.len == 0) return fail("label cannot be empty", .{});
+    try noNewline(label, "label");
     try checkLen("label", label, max_label);
 
     var after: ?W.ItemRef = null;
     if (o.after) |aid| after = try needItem(&w, aid);
 
     var si: usize = undefined;
-    if (o.steps.items.len > 1) return fail("indica un solo --step", .{});
+    if (o.steps.items.len > 1) return fail("specify a single --step", .{});
     if (o.steps.items.len == 1) {
-        si = W.findStep(&w, o.steps.items[0]) orelse return fail("step '{s}' non trovato (vedi `wk steps`)", .{o.steps.items[0]});
-        if (after != null and after.?.si != si) return fail("--after {s} appartiene a un altro step", .{o.after.?});
+        si = W.findStep(&w, o.steps.items[0]) orelse return fail("step '{s}' not found (see `wk steps`)", .{o.steps.items[0]});
+        if (after != null and after.?.si != si) return fail("--after {s} belongs to another step", .{o.after.?});
     } else if (after) |r| {
         si = r.si;
     } else if (w.steps.len == 1) {
         si = 0;
-    } else return fail("indica lo step con --step (vedi `wk steps`)", .{});
+    } else return fail("specify the step with --step (see `wk steps`)", .{});
 
     var id: []const u8 = undefined;
     if (o.id) |x| {
-        if (!W.validId(x)) return fail("ID '{s}' non valido ([A-Za-z0-9_-], max 32)", .{x});
-        if (W.findItem(&w, x) != null) return fail("ID '{s}' già in uso", .{x});
+        if (!W.validId(x)) return fail("ID '{s}' invalid ([A-Za-z0-9_-], max 32)", .{x});
+        if (W.findItem(&w, x) != null) return fail("ID '{s}' already in use", .{x});
         id = x;
     } else id = try W.newId(c.a, &w);
 
@@ -1069,7 +1069,7 @@ fn cmdAdd(c: Ctx, o: *const Opts) !void {
         for (w.steps) |st| for (st.items) |x| if (x.deps.len > 0) {
             graph = true;
         };
-        if (graph) warn("{s} è senza dipendenze né dipendenti, ma il work ha un grafo di dipendenze: se qualcosa la richiede prima, `wk dep add ALTRA {s}`; se lei richiede altro, `wk dep add {s} ALTRA` (altrimenti nessuna voce la aspetta e può restare indietro). Vedi `wk deps` / `wk help delegation`.", .{ id, id, id });
+        if (graph) warn("{s} has no dependencies or dependents, but this work has a dependency graph: use `wk dep add OTHER {s}` for items requiring it, or `wk dep add {s} OTHER` for its prerequisites. Otherwise it may be overlooked. See `wk deps` / `wk help delegation`.", .{ id, id, id });
     }
     try O.oneOut(c.out, &w, r, try viewOf(c.a, o));
 }
@@ -1077,7 +1077,7 @@ fn cmdAdd(c: Ctx, o: *const Opts) !void {
 fn cmdAssign(c: Ctx, o: *const Opts) !void {
     var w = try loadWork(c.a, o);
     var only: ?usize = null;
-    if (o.steps.items.len > 0) only = W.findStep(&w, o.steps.items[0]) orelse return fail("step '{s}' non trovato", .{o.steps.items[0]});
+    if (o.steps.items.len > 0) only = W.findStep(&w, o.steps.items[0]) orelse return fail("step '{s}' not found", .{o.steps.items[0]});
     const n = try W.assignIds(c.a, &w, only, o.dry_run);
     if (!o.dry_run) try W.save(c.a, &w);
     try c.out.print("{{\"assigned\":{d},\"dry_run\":{s}}}\n", .{ n, if (o.dry_run) "true" else "false" });
@@ -1103,7 +1103,7 @@ fn cmdValidate(c: Ctx, o: *const Opts) !u8 {
             try out_.writeByte('}');
         }
     };
-    const allowed = [_][]const u8{ "da iniziare", "in corso", "bloccato", "completato" };
+    const allowed = [_][]const u8{ "not started", "in progress", "blocked", "completed" };
     var any_mode = false;
     for (w.steps) |s| for (s.items) |it| if (O.fieldValue(it, "mode") != null) {
         any_mode = true;
@@ -1114,22 +1114,22 @@ fn cmdValidate(c: Ctx, o: *const Opts) !u8 {
         const v = e.formatVersion() orelse 0;
         if (v > F.current) {
             errors += 1;
-            try Emit.f(out, &n, "error", "entrypoint", 1, try std.fmt.allocPrint(c.a, "formato documenti {d} più recente di questo wk ({d}): aggiorna wk", .{ v, F.current }));
+            try Emit.f(out, &n, "error", "entrypoint", 1, try std.fmt.allocPrint(c.a, "document format {d} is newer than this wk ({d}): update wk", .{ v, F.current }));
         } else if (v < F.current) {
             warnings += 1;
-            try Emit.f(out, &n, "warning", "entrypoint", 1, try std.fmt.allocPrint(c.a, "formato documenti {d} (wk è alla {d}): `wk migrate --from {d}`", .{ v, F.current, v }));
+            try Emit.f(out, &n, "warning", "entrypoint", 1, try std.fmt.allocPrint(c.a, "document format {d} (wk supports {d}): `wk migrate --from {d}`", .{ v, F.current, v }));
         }
     }
     {
         const sizes = [_]struct { f: []const u8, max: u64, hint: []const u8 }{
-            .{ .f = "entrypoint.md", .max = 4000, .hint = "tienilo minimo: `wk entry slim` sposta le sezioni oltre 'Current task' in entrypoint-archive.md" },
-            .{ .f = "plan.md", .max = 16000, .hint = "sintetizza: l'agente lo legge a sezioni (`wk section get plan \"titolo\"`)" },
+            .{ .f = "entrypoint.md", .max = 4000, .hint = "keep it small: `wk entry slim` moves sections beyond 'Current task' to entrypoint-archive.md" },
+            .{ .f = "plan.md", .max = 16000, .hint = "summarize: agents read it by section (`wk section get plan \"Title\"`)" },
         };
         for (sizes) |sz| {
             const st = rt.cwd().statFile(rt.io, try std.fs.path.join(c.a, &.{ w.dir, sz.f }), .{}) catch continue;
             if (st.size > sz.max) {
                 warnings += 1;
-                try Emit.f(out, &n, "warning", sz.f, 1, try std.fmt.allocPrint(c.a, "{s} è di {d} byte (soglia {d}): {s}", .{ sz.f, st.size, sz.max, sz.hint }));
+                try Emit.f(out, &n, "warning", sz.f, 1, try std.fmt.allocPrint(c.a, "{s} has {d} bytes (threshold {d}): {s}", .{ sz.f, st.size, sz.max, sz.hint }));
             }
         }
         var longs: usize = 0;
@@ -1146,17 +1146,17 @@ fn cmdValidate(c: Ctx, o: *const Opts) !u8 {
         };
         if (longs > 0) {
             warnings += 1;
-            try Emit.f(out, &n, "warning", "work", 1, try std.fmt.allocPrint(c.a, "{d} campi oltre {d} caratteri (es. {s} {s}): appesantiscono ogni lettura; riassumili con `wk set` e metti i dettagli in un file", .{ longs, max_field, ex_id, ex_key }));
+            try Emit.f(out, &n, "warning", "work", 1, try std.fmt.allocPrint(c.a, "{d} fields exceed {d} characters (e.g. {s} {s}): they increase every read; summarize with `wk set` and put details in a file", .{ longs, max_field, ex_id, ex_key }));
         }
     }
     for (w.steps) |s| {
         if (s.title.len == 0) {
             errors += 1;
-            try Emit.f(out, &n, "error", s.key, 1, "manca il titolo '# …'");
+            try Emit.f(out, &n, "error", s.key, 1, "missing '# …' title");
         }
         if (s.status.len == 0) {
             errors += 1;
-            try Emit.f(out, &n, "error", s.key, 1, "manca la riga '**Stato:**' (usa `wk step-status`)");
+            try Emit.f(out, &n, "error", s.key, 1, "missing the line '**Status:**' (use `wk step-status`)");
         } else {
             var ok = false;
             for (allowed) |x| if (std.ascii.startsWithIgnoreCase(s.status, x)) {
@@ -1164,61 +1164,61 @@ fn cmdValidate(c: Ctx, o: *const Opts) !u8 {
             };
             if (!ok) {
                 errors += 1;
-                try Emit.f(out, &n, "error", s.key, 1, try std.fmt.allocPrint(c.a, "stato non ammesso '{s}' (da iniziare, in corso, bloccato, completato)", .{s.status}));
+                try Emit.f(out, &n, "error", s.key, 1, try std.fmt.allocPrint(c.a, "invalid status '{s}' (not started, in progress, blocked, completed)", .{s.status}));
             }
         }
         if (s.cl_start == null) {
             errors += 1;
-            try Emit.f(out, &n, "error", s.key, 1, "manca la sezione '## Checklist'");
+            try Emit.f(out, &n, "error", s.key, 1, "missing '## Checklist' section");
         }
         for (s.items, 0..) |it, ii| {
             const line = it.line + 1;
             if (it.id.len == 0) {
                 errors += 1;
-                try Emit.f(out, &n, "error", s.key, line, "voce senza ID (esegui `wk assign-ids`)");
+                try Emit.f(out, &n, "error", s.key, line, "item without ID (run `wk assign-ids`)");
             }
             if (it.label.len == 0) {
                 errors += 1;
-                try Emit.f(out, &n, "error", s.key, line, "etichetta vuota");
+                try Emit.f(out, &n, "error", s.key, line, "empty label");
             }
             if (it.id.len > 0) {
                 const first = W.findItem(&w, it.id).?;
                 if (first.si != s.idx or first.ii != ii) {
                     errors += 1;
-                    try Emit.f(out, &n, "error", s.key, line, try std.fmt.allocPrint(c.a, "ID duplicato '{s}'", .{it.id}));
+                    try Emit.f(out, &n, "error", s.key, line, try std.fmt.allocPrint(c.a, "duplicate ID '{s}'", .{it.id}));
                 }
             }
             if (O.fieldValue(it, "mode")) |m| {
                 if (!(std.ascii.eqlIgnoreCase(m, "isolated") or std.ascii.eqlIgnoreCase(m, "integrated"))) {
                     errors += 1;
-                    try Emit.f(out, &n, "error", s.key, line, try std.fmt.allocPrint(c.a, "mode '{s}' non valido (isolated o integrated)", .{m}));
+                    try Emit.f(out, &n, "error", s.key, line, try std.fmt.allocPrint(c.a, "invalid mode '{s}' (isolated or integrated)", .{m}));
                 }
             } else if (!it.done) unclassified += 1;
             for (it.deps) |d| {
                 if (it.id.len > 0 and std.mem.eql(u8, d, it.id)) {
                     errors += 1;
-                    try Emit.f(out, &n, "error", s.key, line, "la voce dipende da se stessa");
+                    try Emit.f(out, &n, "error", s.key, line, "item depends on itself");
                     continue;
                 }
                 const dr = W.findItem(&w, d) orelse {
                     errors += 1;
-                    try Emit.f(out, &n, "error", s.key, line, try std.fmt.allocPrint(c.a, "dipendenza '{s}' inesistente", .{d}));
+                    try Emit.f(out, &n, "error", s.key, line, try std.fmt.allocPrint(c.a, "dependency '{s}' does not exist", .{d}));
                     continue;
                 };
                 if (it.done and !W.item(&w, dr).done) {
                     warnings += 1;
-                    try Emit.f(out, &n, "warning", s.key, line, try std.fmt.allocPrint(c.a, "completata con dipendenza '{s}' ancora aperta", .{d}));
+                    try Emit.f(out, &n, "warning", s.key, line, try std.fmt.allocPrint(c.a, "completed with dependency '{s}' still open", .{d}));
                 }
             }
             if (it.id.len > 0 and it.deps.len > 0 and try G.reaches(c.a, &w, it.id, it.id)) {
                 errors += 1;
-                try Emit.f(out, &n, "error", s.key, line, try std.fmt.allocPrint(c.a, "ciclo di dipendenze che include '{s}'", .{it.id}));
+                try Emit.f(out, &n, "error", s.key, line, try std.fmt.allocPrint(c.a, "dependency cycle including '{s}'", .{it.id}));
             }
         }
     }
     if (any_mode and unclassified > 0) {
         warnings += 1;
-        try Emit.f(out, &n, "warning", "", 0, try std.fmt.allocPrint(c.a, "{d} voci aperte senza classificazione (`wk list --mode unset --open`)", .{unclassified}));
+        try Emit.f(out, &n, "warning", "", 0, try std.fmt.allocPrint(c.a, "{d} unclassified open items (`wk list --mode unset --open`)", .{unclassified}));
     }
     try out.print("],\"errors\":{d},\"warnings\":{d},\"ok\":{s}}}\n", .{ errors, warnings, if (errors == 0) "true" else "false" });
     return if (errors == 0) 0 else 2;
@@ -1226,15 +1226,15 @@ fn cmdValidate(c: Ctx, o: *const Opts) !u8 {
 
 fn cmdStepStatus(c: Ctx, o: *const Opts) !void {
     const w = try loadWork(c.a, o);
-    if (o.pos.items.len != 2) return fail("uso: wk step-status STEP \"da iniziare|in corso|bloccato|completato\"", .{});
-    const si = W.findStep(&w, o.pos.items[0]) orelse return fail("step '{s}' non trovato (vedi `wk steps`)", .{o.pos.items[0]});
+    if (o.pos.items.len != 2) return fail("usage: wk step-status STEP \"not started|in progress|blocked|completed\"", .{});
+    const si = W.findStep(&w, o.pos.items[0]) orelse return fail("step '{s}' not found (see `wk steps`)", .{o.pos.items[0]});
     const val = W.trim(o.pos.items[1]);
-    const allowed = [_][]const u8{ "da iniziare", "in corso", "bloccato", "completato" };
+    const allowed = [_][]const u8{ "not started", "in progress", "blocked", "completed" };
     var ok = false;
     for (allowed) |x| if (std.ascii.eqlIgnoreCase(x, val)) { ok = true; };
-    if (!ok) return fail("stato '{s}' non ammesso: usa da iniziare, in corso, bloccato o completato", .{val});
+    if (!ok) return fail("invalid status '{s}': use not started, in progress, blocked, or completed", .{val});
     const step = &w.steps[si];
-    if (step.status.len == 0) return fail("{s} non ha la riga `**Stato:**`", .{step.file});
+    if (step.status.len == 0) return fail("{s} does not have the line `**Status:**`", .{step.file});
     try W.setStatus(c.a, step, val);
     try commit(c, &w, o);
     try c.out.writeAll("{\"step\":");
@@ -1271,16 +1271,16 @@ fn cmdSync(c: Ctx, o: *const Opts) !void {
     try out.writeAll("]}\n");
 }
 
-const auto_fields = [_][]const u8{ "File", "Stato", "Avanzamento" };
+const auto_fields = [_][]const u8{ "File", "Status", "Progress" };
 
 fn cmdEntry(c: Ctx, o: *const Opts) !void {
     const w = try loadWork(c.a, o);
-    var entry = (try E.Entry.load(c.a, w.dir)) orelse return fail("{s}/entrypoint.md non esiste", .{w.dir});
+    var entry = (try E.Entry.load(c.a, w.dir)) orelse return fail("{s}/entrypoint.md does not exist", .{w.dir});
     const sub = if (o.pos.items.len > 0) o.pos.items[0] else "get";
     if (std.mem.eql(u8, sub, "get")) {
         const fl = try entry.fields(c.a);
         if (o.format == .text) {
-            try c.out.print("formato documenti: work {d}, tool {d}\n", .{ entry.formatVersion() orelse 0, F.current });
+            try c.out.print("document format: work {d}, tool {d}\n", .{ entry.formatVersion() orelse 0, F.current });
             for (fl) |f| try c.out.print("{s}: {s}\n", .{ f.label, f.value });
             return;
         }
@@ -1330,13 +1330,13 @@ fn cmdEntry(c: Ctx, o: *const Opts) !void {
         if (!o.dry_run and moved.items.len > 0) {
             const apath = try std.fs.path.join(c.a, &.{ w.dir, "entrypoint-archive.md" });
             const old = rt.readFileAlloc(c.a, apath, 64 * 1024 * 1024) catch |e| switch (e) {
-                error.FileNotFound => @as([]u8, try c.a.dupe(u8, "# Archivio dell'entrypoint\n\nSezioni spostate da `wk entry slim`: non vanno lette per riprendere il lavoro.\n")),
+                error.FileNotFound => @as([]u8, try c.a.dupe(u8, "# Entrypoint archive\n\nSections moved by `wk entry slim`: do not read these to resume work.\n")),
                 else => return e,
             };
             var ab: std.ArrayList(u8) = .empty;
             try ab.appendSlice(c.a, old);
             if (old.len == 0 or old[old.len - 1] != '\n') try ab.append(c.a, '\n');
-            try ab.print(c.a, "\n<!-- archiviato il {s} -->\n\n", .{try nowIso(c.a)});
+            try ab.print(c.a, "\n<!-- archived on {s} -->\n\n", .{try nowIso(c.a)});
             for (moved.items) |l| try ab.print(c.a, "{s}\n", .{l});
             var alines: std.ArrayList([]const u8) = .empty;
             var asp = std.mem.splitScalar(u8, std.mem.trimEnd(u8, ab.items, "\n"), '\n');
@@ -1358,12 +1358,12 @@ fn cmdEntry(c: Ctx, o: *const Opts) !void {
         return;
     }
     const is_set = std.mem.eql(u8, sub, "set");
-    if (!is_set and !std.mem.eql(u8, sub, "unset")) return fail("sottocomando '{s}': usa get, set, unset o slim (vedi `wk entry --help`)", .{sub});
-    if (o.pos.items.len < (if (is_set) @as(usize, 3) else 2)) return fail("uso: wk entry set \"Etichetta\" \"valore\"  |  wk entry unset \"Etichetta\"", .{});
+    if (!is_set and !std.mem.eql(u8, sub, "unset")) return fail("subcommand '{s}': use get, set, unset, or slim (see `wk entry --help`)", .{sub});
+    if (o.pos.items.len < (if (is_set) @as(usize, 3) else 2)) return fail("usage: wk entry set \"Label\" \"value\"  |  wk entry unset \"Label\"", .{});
     const label = W.trim(o.pos.items[1]);
-    if (label.len == 0 or std.mem.indexOfAny(u8, label, ":*\r\n") != null) return fail("etichetta non valida: '{s}'", .{label});
-    if (std.ascii.eqlIgnoreCase(label, "Sessione automatica")) return fail("'Sessione automatica' si gestisce con `wk auto start|status|stop`", .{});
-    for (auto_fields) |af| if (std.ascii.eqlIgnoreCase(af, label)) return fail("'{s}' è gestito da `wk sync` (si aggiorna da solo)", .{af});
+    if (label.len == 0 or std.mem.indexOfAny(u8, label, ":*\r\n") != null) return fail("invalid label: '{s}'", .{label});
+    if (std.ascii.eqlIgnoreCase(label, "Automatic session")) return fail("'Automatic session' is managed with `wk auto start|status|stop`", .{});
+    for (auto_fields) |af| if (std.ascii.eqlIgnoreCase(af, label)) return fail("'{s}' is managed by `wk sync` (updated automatically)", .{af});
     var changed: bool = undefined;
     if (is_set) {
         var vb: std.ArrayList(u8) = .empty;
@@ -1372,11 +1372,11 @@ fn cmdEntry(c: Ctx, o: *const Opts) !void {
             try vb.appendSlice(c.a, p);
         }
         const val = W.trim(vb.items);
-        if (val.len == 0) return fail("valore vuoto (usa `wk entry unset`)", .{});
-        try noNewline(val, "valore");
+        if (val.len == 0) return fail("empty value (use `wk entry unset`)", .{});
+        try noNewline(val, "value");
         try checkLen(label, val, max_field + 200);
         changed = entry.set(c.a, label, val, null) catch |e| switch (e) {
-            error.NoSection => return fail("entrypoint.md non ha la sezione '## Current task'", .{}),
+            error.NoSection => return fail("entrypoint.md does not have section '## Current task'", .{}),
             else => return e,
         };
     } else {
@@ -1389,24 +1389,24 @@ fn cmdEntry(c: Ctx, o: *const Opts) !void {
 const step_template =
     \\# Step {s} — {s}
     \\
-    \\**Fase del piano:** da definire  
-    \\**Stato:** da iniziare  
+    \\**Plan phase:** to be defined
+    \\**Status:** not started
     \\
-    \\## Obiettivo
+    \\## Goal
     \\
-    \\Da definire.
+    \\To be defined.
     \\
     \\## Checklist
     \\
-    \\## Criteri di uscita
+    \\## Completion criteria
     \\
-    \\- Da definire.
+    \\- To be defined.
     \\
-    \\## Risultati e decisioni
+    \\## Results and decisions
     \\
-    \\## Ripresa e passaggio di consegne
+    \\## Handoff
     \\
-    \\- **Prossima azione:** da definire.
+    \\- **Next action:** to be defined.
     \\
 ;
 
@@ -1434,43 +1434,43 @@ fn cmdNewStep(c: Ctx, o: *const Opts) !void {
         var w2 = try W.load(c.a, w.dir);
         if (o.phase != null or o.prereq != null) {
             const ns = &w2.steps[w2.steps.len - 1];
-            if (o.phase) |t| try W.setMeta(c.a, ns, "Fase del piano", W.trim(t));
-            if (o.prereq) |t| try W.setMeta(c.a, ns, "Prerequisiti", W.trim(t));
+            if (o.phase) |t| try W.setMeta(c.a, ns, "Plan phase", W.trim(t));
+            if (o.prereq) |t| try W.setMeta(c.a, ns, "Prerequisites", W.trim(t));
         }
         try commit(c, &w2, o);
         try c.out.print("{{\"created\":\"{s}\",\"key\":\"step-{s}\"}}\n", .{ file, num });
         return;
     };
-    return fail("{s} esiste già", .{file});
+    return fail("{s} already exists", .{file});
 }
 
 fn cmdInit(c: Ctx, o: *const Opts) !void {
-    if (o.pos.items.len != 1) return fail("uso: wk init DIR [--title T]", .{});
+    if (o.pos.items.len != 1) return fail("usage: wk init DIR [--title T]", .{});
     const dir = o.pos.items[0];
     try rt.makePath(dir);
     {
         var d = try rt.openDir(dir, .{ .iterate = true });
         defer d.close(rt.io);
         var it = d.iterate();
-        if (try it.next(rt.io) != null and !o.force) return fail("'{s}' non è vuota (usa --force: non sovrascrive i file esistenti)", .{dir});
+        if (try it.next(rt.io) != null and !o.force) return fail("'{s}' is not empty (use --force: existing files are preserved)", .{dir});
     }
     const title = o.title orelse std.fs.path.basename(dir);
     const entry = try std.fmt.allocPrint(c.a,
         \\# {s} — entrypoint
         \\
-        \\**Versione documenti:** {d}
+        \\**Document version:** {d}
         \\
         \\## Current task
         \\
         \\- **File:** [tasks-step-001.md — Step 001](tasks-step-001.md)
-        \\- **Stato:** da iniziare
-        \\- **Prossima azione:** da definire
+        \\- **Status:** not started
+        \\- **Next action:** to be defined
         \\
     , .{ title, F.current });
-    const plan = try std.fmt.allocPrint(c.a, "# Piano — {s}\n\n## Strategia\n\nDa definire.\n", .{title});
+    const plan = try std.fmt.allocPrint(c.a, "# Plan — {s}\n\n## Strategy\n\nTo be defined.\n", .{title});
     try writeNew(c.a, try std.fs.path.join(c.a, &.{ dir, "entrypoint.md" }), entry);
     try writeNew(c.a, try std.fs.path.join(c.a, &.{ dir, "plan.md" }), plan);
-    try writeNew(c.a, try std.fs.path.join(c.a, &.{ dir, "tasks-step-001.md" }), try std.fmt.allocPrint(c.a, step_template, .{ "001", o.first_step orelse "Primo step" }));
+    try writeNew(c.a, try std.fs.path.join(c.a, &.{ dir, "tasks-step-001.md" }), try std.fmt.allocPrint(c.a, step_template, .{ "001", o.first_step orelse "First step" }));
     try c.out.writeAll("{\"created\":");
     try O.jstr(c.out, dir);
     try c.out.writeAll(",\"files\":[\"entrypoint.md\",\"plan.md\",\"tasks-step-001.md\"]}\n");
@@ -1568,14 +1568,14 @@ fn cmdHook(c: Ctx, o: *const Opts) !u8 {
         var b: std.ArrayList(u8) = .empty;
         try b.print(c.a, "Questo progetto ha dei work (", .{});
         for (works.items, 0..) |w, i| try b.print(c.a, "{s}{s}", .{ if (i > 0) ", " else "", std.fs.path.basename(w) });
-        try b.print(c.a, "): si leggono e si modificano solo con la CLI `wk` (skill wk), mai a mano. Per riprendere: `wk steps` e `wk next`; non leggere entrypoint.md e plan.md come file. Se `wk` non è nel PATH il binario è {s}.", .{self_exe});
+        try b.print(c.a, "): read and update only through the `wk` CLI (wk skill). Resume with `wk steps` and `wk next`; do not read entrypoint.md and plan.md directly. If `wk` is not on PATH, the binary is {s}.", .{self_exe});
         for (works.items) |w| {
             if (sessionOf(c.a, w) == null) continue;
             const name = std.fs.path.basename(w);
             if (std.mem.eql(u8, inp.source, "compact")) {
-                try b.print(c.a, " SESSIONE AUTOMATICA ATTIVA su {s}: dopo la compattazione prosegui il ciclo (`wk auto status`, poi `wk next`); regole e condizioni di stop in `wk help auto`.", .{name});
+                try b.print(c.a, " ACTIVE AUTOMATIC SESSION on {s}: after compaction continue the loop (`wk auto status`, then `wk next`); see `wk help auto` for rules and stop conditions.", .{name});
             } else {
-                try b.print(c.a, " Su {s} c'è una sessione automatica registrata da una conversazione precedente: non riprenderla senza una richiesta esplicita dell'utente (`wk auto stop --force` per chiuderla).", .{name});
+                try b.print(c.a, " Work {s} has an automatic session from a previous conversation: resume only on explicit user request (`wk auto stop --force` closes it).", .{name});
             }
         }
         try out.writeAll("{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":");
@@ -1598,7 +1598,7 @@ fn cmdHook(c: Ctx, o: *const Opts) !u8 {
             st.completed = ev.completed;
             writeHookState(c.a, sp, st);
             if (st.stalls >= 3) continue; // nessun progresso dopo più richiami: non incastrare l'agente
-            const msg = try std.fmt.allocPrint(c.a, "Sessione automatica attiva su {s}: `wk auto status` dà continue=true (completate {d}/{d}, disponibili {d}). Non ti fermare: chiudere uno step o un traguardo non è uno stop. Prosegui con `wk next`. Se l'utente ti ha chiesto di fermarti: `wk auto stop --force`.", .{ std.fs.path.basename(wdir), ev.completed, sess.limit, cn.avail });
+            const msg = try std.fmt.allocPrint(c.a, "Active automatic session on {s}: `wk auto status` returns continue=true (completed {d}/{d}, available {d}). Continue with `wk next`: completing a step or milestone is not a stop. If the user asked you to stop: `wk auto stop --force`.", .{ std.fs.path.basename(wdir), ev.completed, sess.limit, cn.avail });
             try out.writeAll("{\"decision\":\"block\",\"reason\":");
             try O.jstr(out, msg);
             try out.writeAll("}\n");
@@ -1638,8 +1638,8 @@ fn printWith(c: Ctx, w: *const W.Work, ids: []const []const u8, o: *const Opts, 
 
 fn cmdClassify(c: Ctx, o: *const Opts) !void {
     var w = try loadWork(c.a, o);
-    if (o.pos.items.len == 0) return fail("manca almeno un ID (vedi `wk classify --help`)", .{});
-    const mode = o.mode orelse return fail("manca --mode isolated|integrated|unset", .{});
+    if (o.pos.items.len == 0) return fail("at least one ID is required (see `wk classify --help`)", .{});
+    const mode = o.mode orelse return fail("missing --mode isolated|integrated|unset", .{});
     if (o.reason) |r| try noNewline(r, "--reason");
     for (o.pos.items) |id| _ = try needItem(&w, id);
     for (o.pos.items) |id| {
@@ -1656,7 +1656,7 @@ fn cmdClassify(c: Ctx, o: *const Opts) !void {
                 try putField(c.a, &it, "mode_reason", W.trim(rs));
             } else if (changed and O.fieldValue(it, "mode_reason") != null) {
                 try dropField(c.a, &it, "mode_reason");
-                warn("{s}: motivo precedente rimosso perché la classificazione è cambiata; indica il nuovo con --reason.", .{id});
+                warn("{s}: previous reason removed because classification changed; supply a new --reason.", .{id});
             }
         }
         try W.commitItem(c.a, &w, r, it);
@@ -1667,16 +1667,16 @@ fn cmdClassify(c: Ctx, o: *const Opts) !void {
 
 fn cmdDep(c: Ctx, o: *const Opts) !void {
     var w = try loadWork(c.a, o);
-    if (o.pos.items.len < 2) return fail("uso: wk dep add|rm|set ID [DEP...] (vedi `wk dep --help`)", .{});
+    if (o.pos.items.len < 2) return fail("usage: wk dep add|rm|set ID [DEP...] (see `wk dep --help`)", .{});
     const sub = o.pos.items[0];
     const is_add = std.mem.eql(u8, sub, "add");
     const is_rm = std.mem.eql(u8, sub, "rm");
     const is_set = std.mem.eql(u8, sub, "set");
-    if (!is_add and !is_rm and !is_set) return fail("sottocomando '{s}': usa add, rm o set", .{sub});
+    if (!is_add and !is_rm and !is_set) return fail("subcommand '{s}': use add, rm, or set", .{sub});
     const id = o.pos.items[1];
     const r = try needItem(&w, id);
     const args = o.pos.items[2..];
-    if ((is_add or is_rm) and args.len == 0) return fail("indica almeno un ID di dipendenza", .{});
+    if ((is_add or is_rm) and args.len == 0) return fail("specify at least one dependency ID", .{});
     if (o.reason) |rs| try noNewline(rs, "--reason");
 
     var it = W.item(&w, r).*;
@@ -1695,15 +1695,15 @@ fn cmdDep(c: Ctx, o: *const Opts) !void {
         cur = keep;
     } else {
         for (args) |d| {
-            const dr = W.findItem(&w, d) orelse return fail("dipendenza '{s}' non trovata", .{d});
-            if (std.mem.eql(u8, d, id)) return fail("una voce non può dipendere da se stessa ('{s}')", .{id});
-            if (try G.reaches(c.a, &w, d, id)) return fail("ciclo: '{s}' dipende già, anche indirettamente, da '{s}'. Vedi `wk deps {s} --up`.", .{ d, id, d });
+            const dr = W.findItem(&w, d) orelse return fail("dependency '{s}' not found", .{d});
+            if (std.mem.eql(u8, d, id)) return fail("an item cannot depend on itself ('{s}')", .{id});
+            if (try G.reaches(c.a, &w, d, id)) return fail("cycle: '{s}' already depends on '{s}', directly or indirectly. See `wk deps {s} --up`.", .{ d, id, d });
             var dup = false;
             for (cur.items) |x| if (std.mem.eql(u8, x, d)) {
                 dup = true;
             };
             if (!dup) try cur.append(c.a, d);
-            if (it.done and !W.item(&w, dr).done) warn("{s} è completata ma la dipendenza {s} è aperta.", .{ id, d });
+            if (it.done and !W.item(&w, dr).done) warn("{s} is completed but dependency {s} is open.", .{ id, d });
         }
     }
     it.deps = cur.items;
@@ -1719,7 +1719,7 @@ fn cmdDep(c: Ctx, o: *const Opts) !void {
 
 fn cmdDeps(c: Ctx, o: *const Opts) !void {
     const w = try loadWork(c.a, o);
-    if (o.up and o.down) return fail("usa solo uno tra --up e --down", .{});
+    if (o.up and o.down) return fail("use only one of --up and --down", .{});
     var root: ?W.ItemRef = null;
     if (o.pos.items.len > 0) root = try needItem(&w, o.pos.items[0]);
     const up = if (o.up) true else if (o.down) false else root != null;
@@ -1801,7 +1801,7 @@ fn cmdWaves(c: Ctx, o: *const Opts) !void {
             try O.jstr(out, W.item(&w, r).id);
         }
         try out.writeAll("]}\n");
-    } else if (wv.rest.len > 0) try out.print("non pianificabili (cicli): {d}\n", .{wv.rest.len});
+    } else if (wv.rest.len > 0) try out.print("unschedulable (cycles): {d}\n", .{wv.rest.len});
 }
 
 // ------------------------------------------------------------ sezioni e metadati degli step
@@ -1829,13 +1829,13 @@ fn openDoc(a: std.mem.Allocator, w: *const W.Work, target: []const u8) !Doc {
         doc.path = try std.fs.path.join(a, &.{ w.dir, fname });
         doc.entry = std.mem.eql(u8, fname, "entrypoint.md");
         const data = rt.readFileAlloc(a, doc.path, 16 * 1024 * 1024) catch |e| switch (e) {
-            error.FileNotFound => return fail("{s} non esiste", .{doc.path}),
+            error.FileNotFound => return fail("{s} does not exist", .{doc.path}),
             else => return e,
         };
         try splitInto(a, &doc, data);
         return doc;
     }
-    const si = W.findStep(w, target) orelse return fail("'{s}' non è uno step (vedi `wk steps`) né `plan` / `entrypoint`", .{target});
+    const si = W.findStep(w, target) orelse return fail("'{s}' is neither a step (see `wk steps`) nor `plan` / `entrypoint`", .{target});
     doc.step = si;
     doc.lines = w.steps[si].lines;
     return doc;
@@ -1849,7 +1849,7 @@ fn readStdin(a: std.mem.Allocator) ![]const u8 {
 
 fn cmdSection(c: Ctx, o: *const Opts) !void {
     const w = try loadWork(c.a, o);
-    if (o.pos.items.len < 2) return fail("uso: wk section ls|get|set TARGET [\"Titolo\" [testo|-]] (vedi `wk section --help`)", .{});
+    if (o.pos.items.len < 2) return fail("usage: wk section ls|get|set TARGET [\"Title\" [text|-]] (see `wk section --help`)", .{});
     const sub = o.pos.items[0];
     const target = o.pos.items[1];
     var doc = try openDoc(c.a, &w, target);
@@ -1871,11 +1871,11 @@ fn cmdSection(c: Ctx, o: *const Opts) !void {
         try out.writeAll("]}\n");
         return;
     }
-    if (o.pos.items.len < 3) return fail("manca il titolo della sezione (vedi `wk section ls {s}`)", .{target});
+    if (o.pos.items.len < 3) return fail("missing section title (see `wk section ls {s}`)", .{target});
     const title = W.trim(o.pos.items[2]);
 
     if (std.mem.eql(u8, sub, "get")) {
-        const sp = Sec.find(doc.lines.items, title) orelse return fail("sezione '{s}' non trovata in {s} (vedi `wk section ls {s}`)", .{ title, target, target });
+        const sp = Sec.find(doc.lines.items, title) orelse return fail("section '{s}' not found in {s} (see `wk section ls {s}`)", .{ title, target, target });
         const b = Sec.body(doc.lines.items, sp);
         if (o.format != .json) {
             for (b) |l| try out.print("{s}\n", .{l});
@@ -1893,10 +1893,10 @@ fn cmdSection(c: Ctx, o: *const Opts) !void {
         try out.writeAll("}\n");
         return;
     }
-    if (!std.mem.eql(u8, sub, "set")) return fail("sottocomando '{s}': usa ls, get o set", .{sub});
-    if (std.ascii.startsWithIgnoreCase(title, "checklist")) return fail("la checklist non si scrive come testo: usa add, check, edit, set, tag…", .{});
-    if (doc.entry and std.ascii.eqlIgnoreCase(title, "current task")) return fail("'Current task' si gestisce con `wk entry set` e `wk sync`", .{});
-    if (o.pos.items.len < 4) return fail("manca il testo (o `-` per leggerlo da stdin)", .{});
+    if (!std.mem.eql(u8, sub, "set")) return fail("subcommand '{s}': use ls, get, or set", .{sub});
+    if (std.ascii.startsWithIgnoreCase(title, "checklist")) return fail("update the checklist with add, check, edit, set, tag…", .{});
+    if (doc.entry and std.ascii.eqlIgnoreCase(title, "current task")) return fail("'Current task' is managed with `wk entry set` e `wk sync`", .{});
+    if (o.pos.items.len < 4) return fail("missing text (or `-` to read stdin)", .{});
     var text: []const u8 = undefined;
     if (o.pos.items.len == 4 and std.mem.eql(u8, o.pos.items[3], "-")) {
         text = try readStdin(c.a);
@@ -1908,8 +1908,8 @@ fn cmdSection(c: Ctx, o: *const Opts) !void {
         }
         text = b.items;
     }
-    if (W.trim(text).len == 0) return fail("testo vuoto", .{});
-    if (std.mem.indexOf(u8, text, "\n## ") != null or std.mem.startsWith(u8, text, "## ")) return fail("il testo contiene intestazioni '## ': crea sezioni separate con più `wk section set`", .{});
+    if (W.trim(text).len == 0) return fail("empty text", .{});
+    if (std.mem.indexOf(u8, text, "\n## ") != null or std.mem.startsWith(u8, text, "## ")) return fail("text contains '## ' headings: create separate sections with multiple `wk section set` commands", .{});
     const nl = try Sec.replace(c.a, doc.lines.items, title, text);
     if (doc.step) |si| {
         const step = &w.steps[si];
@@ -1927,9 +1927,9 @@ fn cmdSection(c: Ctx, o: *const Opts) !void {
 
 fn cmdStepSet(c: Ctx, o: *const Opts) !void {
     const w = try loadWork(c.a, o);
-    if (o.pos.items.len != 1) return fail("uso: wk step-set STEP [--title T] [--phase F] [--prereq P]", .{});
-    const si = W.findStep(&w, o.pos.items[0]) orelse return fail("step '{s}' non trovato (vedi `wk steps`)", .{o.pos.items[0]});
-    if (o.title == null and o.phase == null and o.prereq == null) return fail("indica almeno uno tra --title, --phase, --prereq", .{});
+    if (o.pos.items.len != 1) return fail("usage: wk step-set STEP [--title T] [--phase F] [--prereq P]", .{});
+    const si = W.findStep(&w, o.pos.items[0]) orelse return fail("step '{s}' not found (see `wk steps`)", .{o.pos.items[0]});
+    if (o.title == null and o.phase == null and o.prereq == null) return fail("specify at least one of --title, --phase, --prereq", .{});
     const step = &w.steps[si];
     if (o.title) |t| {
         try noNewline(t, "--title");
@@ -1937,11 +1937,11 @@ fn cmdStepSet(c: Ctx, o: *const Opts) !void {
     }
     if (o.phase) |t| {
         try noNewline(t, "--phase");
-        try W.setMeta(c.a, step, "Fase del piano", W.trim(t));
+        try W.setMeta(c.a, step, "Plan phase", W.trim(t));
     }
     if (o.prereq) |t| {
         try noNewline(t, "--prereq");
-        try W.setMeta(c.a, step, "Prerequisiti", W.trim(t));
+        try W.setMeta(c.a, step, "Prerequisites", W.trim(t));
     }
     try commit(c, &w, o);
     try c.out.writeAll("{\"step\":");
@@ -1956,7 +1956,7 @@ fn cmdStepSet(c: Ctx, o: *const Opts) !void {
 
 fn cmdVersion(c: Ctx, o: *const Opts) !void {
     if (o.format == .text) {
-        try c.out.print("wk {s} ({s}) · formato documenti {d}\n", .{ BO.version, BO.commit, F.current });
+        try c.out.print("wk {s} ({s}) · document format {d}\n", .{ BO.version, BO.commit, F.current });
         for (F.migrations) |m| try c.out.print("  {d} → {d}: {s}\n", .{ m.from, m.to, m.summary });
         return;
     }
@@ -1972,11 +1972,11 @@ fn cmdVersion(c: Ctx, o: *const Opts) !void {
 
 fn cmdMigrate(c: Ctx, o: *const Opts) !void {
     var w = try loadWorkRaw(c.a, o);
-    var entry = (try E.Entry.load(c.a, w.dir)) orelse return fail("manca {s}/entrypoint.md: la versione dei documenti si dichiara lì", .{w.dir});
+    var entry = (try E.Entry.load(c.a, w.dir)) orelse return fail("missing {s}/entrypoint.md: document version is declared there", .{w.dir});
     const actual = entry.formatVersion() orelse 0;
-    const from = o.from orelse return fail("indica --from N con la versione letta dall'entrypoint (`wk entry get` → format.work; qui è {d})", .{actual});
-    if (from != actual) return fail("--from {d} non corrisponde: l'entrypoint dichiara la versione {d}", .{ from, actual });
-    if (actual > F.current) return fail("il work usa il formato {d}, ma questo wk arriva alla {d}: aggiorna wk", .{ actual, F.current });
+    const from = o.from orelse return fail("specify --from N using the entrypoint version (`wk entry get` → format.work; currently {d})", .{actual});
+    if (from != actual) return fail("--from {d} does not match entrypoint version {d}", .{ from, actual });
+    if (actual > F.current) return fail("work uses format {d}, but this wk supports up to {d}: update wk", .{ actual, F.current });
     const out = c.out;
     if (actual == F.current) {
         try out.print("{{\"changed\":false,\"format\":{d}}}\n", .{actual});
@@ -1986,7 +1986,7 @@ fn cmdMigrate(c: Ctx, o: *const Opts) !void {
     var v = actual;
     var first = true;
     while (v < F.current) {
-        const m = F.find(v) orelse return fail("nessuna migrazione dalla versione {d}", .{v});
+        const m = F.find(v) orelse return fail("no migration from version {d}", .{v});
         const rep = try F.apply(c.a, &w, &entry, m, o.dry_run);
         if (!first) try out.writeByte(',');
         first = false;
@@ -2025,23 +2025,23 @@ fn splitOptions(a: std.mem.Allocator, v: ?[]const u8) !List {
 
 fn cmdHold(c: Ctx, o: *const Opts) !void {
     var w = try loadWork(c.a, o);
-    if (o.pos.items.len < 2) return fail("uso: wk hold ID \"domanda\" [--option X]… [--default X] (vedi `wk hold --help`)", .{});
+    if (o.pos.items.len < 2) return fail("usage: wk hold ID \"question\" [--option X]… [--default X] (see `wk hold --help`)", .{});
     const id = o.pos.items[0];
     const r = try needItem(&w, id);
     var it = W.item(&w, r).*;
-    if (it.done) return fail("{s} è già completata", .{id});
+    if (it.done) return fail("{s} is already completed", .{id});
     const q = W.trim(try joinArgs(c.a, o.pos.items[1..]));
-    if (q.len == 0) return fail("domanda vuota", .{});
-    try noNewline(q, "domanda");
+    if (q.len == 0) return fail("empty question", .{});
+    try noNewline(q, "question");
     for (o.options.items) |op| {
         try noNewline(op, "--option");
-        if (W.trim(op).len == 0) return fail("--option vuota", .{});
-        if (std.mem.indexOf(u8, op, " | ") != null) return fail("--option non può contenere ' | '", .{});
+        if (W.trim(op).len == 0) return fail("empty --option", .{});
+        if (std.mem.indexOf(u8, op, " | ") != null) return fail("--option cannot contain ' | '", .{});
     }
-    for (o.options.items) |op| if (isPostponeText(op)) return fail("l'opzione \"{s}\" è un rinvio: non va tra le risposte. Rimandare lo decide l'utente (pulsante \"Rimanda\" della dashboard) e si registra con `wk defer ID`", .{op});
-    if (o.default_answer) |d| if (isPostponeText(d)) return fail("--default \"{s}\" è un rinvio: non può essere la risposta proposta (vedi `wk help hold`)", .{d});
-    if (o.options.items.len == 1) return fail("indica almeno due --option (oppure nessuna per una risposta libera)", .{});
-    try checkLen("domanda", q, max_question);
+    for (o.options.items) |op| if (isPostponeText(op)) return fail("option \"{s}\" is a deferral, not an answer. The user chooses deferral (dashboard Defer button); record it with `wk defer ID`", .{op});
+    if (o.default_answer) |d| if (isPostponeText(d)) return fail("--default \"{s}\" is a deferral and cannot be the suggested answer (see `wk help hold`)", .{d});
+    if (o.options.items.len == 1) return fail("supply at least two --option values (or none for a free-form answer)", .{});
+    try checkLen("question", q, max_question);
     try putField(c.a, &it, "hold", q);
     if (o.options.items.len > 0) {
         var b: std.ArrayList(u8) = .empty;
@@ -2082,14 +2082,14 @@ fn resolveItem(a: std.mem.Allocator, w: *const W.Work, id: []const u8, ans: []co
 
 fn cmdResolve(c: Ctx, o: *const Opts) !void {
     var w = try loadWork(c.a, o);
-    if (o.pos.items.len < 2) return fail("uso: wk resolve ID \"risposta\"", .{});
+    if (o.pos.items.len < 2) return fail("usage: wk resolve ID \"answer\"", .{});
     const id = o.pos.items[0];
     const r = try needItem(&w, id);
     const it = W.item(&w, r).*;
-    if (O.fieldValue(it, "hold") == null) return fail("{s} non è in attesa di risposta (vedi `wk questions`)", .{id});
+    if (O.fieldValue(it, "hold") == null) return fail("{s} is not waiting for an answer (see `wk questions`)", .{id});
     const ans = W.trim(try joinArgs(c.a, o.pos.items[1..]));
-    if (ans.len == 0) return fail("risposta vuota", .{});
-    try noNewline(ans, "risposta");
+    if (ans.len == 0) return fail("empty answer", .{});
+    try noNewline(ans, "answer");
     try resolveItem(c.a, &w, id, ans);
     try W.save(c.a, &w);
     try printWith(c, &w, &.{id}, o, "id,asked,answer");
@@ -2098,7 +2098,7 @@ fn cmdResolve(c: Ctx, o: *const Opts) !void {
 /// Testo che esprime un rinvio ("Rimanda", "Non ancora", "più tardi"…): non è una risposta valida a una domanda.
 /// Le parole devono iniziare a inizio parola ("rimane" non è un rinvio, "rimanda" sì).
 fn isPostponeText(t: []const u8) bool {
-    const needles = [_][]const u8{ "rimand", "rinvi", "differi", "posticip", "non ancora", "più tardi", "piu tardi", "postpone", "defer" };
+    const needles = [_][]const u8{ "rimand", "rinvi", "differi", "posticip", "non ancora", "più tardi", "piu tardi", "postpone", "defer", "not yet", "later" };
     for (needles) |n| {
         var from: usize = 0;
         while (std.ascii.findIgnoreCase(t[from..], n)) |i| {
@@ -2132,13 +2132,13 @@ fn blockedBy(a: std.mem.Allocator, w: *const W.Work, id: []const u8) !usize {
 /// wk defer ID [--note "…"]: l'utente rimanda la risposta; la domanda resta intatta ma esce dalla coda.
 fn cmdDefer(c: Ctx, o: *const Opts) !void {
     var w = try loadWork(c.a, o);
-    if (o.pos.items.len == 0) return fail("uso: wk defer ID [--note \"cosa si aspetta\"] (vedi `wk defer --help`)", .{});
+    if (o.pos.items.len == 0) return fail("usage: wk defer ID [--note \"what we are waiting for\"] (see `wk defer --help`)", .{});
     const id = o.pos.items[0];
     const r = try needItem(&w, id);
     var it = W.item(&w, r).*;
-    if (it.done) return fail("{s} è già completata", .{id});
-    if (O.fieldValue(it, "hold") == null) return fail("{s} non ha una domanda in attesa: si rimanda solo una voce con `wk hold` (vedi `wk questions`)", .{id});
-    if (o.pos.items.len > 1) return fail("un solo ID per volta; la nota si passa con --note", .{});
+    if (it.done) return fail("{s} is already completed", .{id});
+    if (O.fieldValue(it, "hold") == null) return fail("{s} has no pending question: only items with `wk hold` can be deferred (see `wk questions`)", .{id});
+    if (o.pos.items.len > 1) return fail("one ID at a time; pass the note with --note", .{});
     try putField(c.a, &it, "deferred", (try nowIso(c.a))[0..10]);
     if (o.note) |n| {
         try noNewline(n, "--note");
@@ -2153,11 +2153,11 @@ fn cmdDefer(c: Ctx, o: *const Opts) !void {
 /// wk undefer ID: rimette la domanda in coda.
 fn cmdUndefer(c: Ctx, o: *const Opts) !void {
     var w = try loadWork(c.a, o);
-    if (o.pos.items.len != 1) return fail("uso: wk undefer ID", .{});
+    if (o.pos.items.len != 1) return fail("usage: wk undefer ID", .{});
     const id = o.pos.items[0];
     const r = try needItem(&w, id);
     var it = W.item(&w, r).*;
-    if (O.fieldValue(it, "deferred") == null) return fail("{s} non è rimandata (vedi `wk questions --deferred`)", .{id});
+    if (O.fieldValue(it, "deferred") == null) return fail("{s} is not deferred (see `wk questions --deferred`)", .{id});
     try dropField(c.a, &it, "deferred");
     try dropField(c.a, &it, "defer_note");
     try W.commitItem(c.a, &w, r, it);
@@ -2181,15 +2181,15 @@ fn cmdQuestions(c: Ctx, o: *const Opts) !void {
             }
             try out.print("{s}  {s}\n   ? {s}\n", .{ it.id, it.label, O.fieldValue(it, "hold").? });
             if (O.fieldValue(it, "deferred")) |dd| {
-                try out.print("     rimandata il {s}", .{dd});
+                try out.print("     deferred on {s}", .{dd});
                 if (O.fieldValue(it, "defer_note")) |nn| try out.print(": {s}", .{nn});
                 const nb = try blockedBy(c.a, &w, it.id);
-                if (nb > 0) try out.print(" · ferma {d} voci", .{nb});
+                if (nb > 0) try out.print(" · blocks {d} items", .{nb});
                 try out.writeByte('\n');
             }
             const opts = try splitOptions(c.a, O.fieldValue(it, "hold_options"));
             for (opts.items, 0..) |op, k| try out.print("     {d}) {s}\n", .{ k + 1, op });
-            if (O.fieldValue(it, "hold_default")) |d| try out.print("     proposta: {s}\n", .{d});
+            if (O.fieldValue(it, "hold_default")) |d| try out.print("     suggested: {s}\n", .{d});
         }
         return;
     }
@@ -2243,14 +2243,14 @@ fn allDigits(t: []const u8) bool {
     return true;
 }
 
-/// wk reply: risposte alle domande in attesa. Con argomenti ID "risposta"… registra (per gli agenti);
+/// wk reply: risposte alle domande in attesa. Con argomenti ID "answer"… registra (per gli agenti);
 /// senza argomenti è interattivo (per l'utente, richiede un terminale), una domanda alla volta.
 fn cmdReply(c: Ctx, o: *const Opts) !void {
     const dir = try resolveWork(c.a, o);
     const out = c.out;
 
     if (o.pos.items.len > 0) {
-        if (o.pos.items.len % 2 != 0) return fail("uso: wk reply ID \"risposta\" [ID \"risposta\"…] (oppure senza argomenti, in un terminale, per rispondere una alla volta)", .{});
+        if (o.pos.items.len % 2 != 0) return fail("usage: wk reply ID \"answer\" [ID \"answer\"…] (or without arguments in a terminal to answer one at a time)", .{});
         try lockWork(dir);
         defer unlockWork();
         var w = try W.load(c.a, dir);
@@ -2261,11 +2261,11 @@ fn cmdReply(c: Ctx, o: *const Opts) !void {
             const r = try needItem(&w, id);
             const it = W.item(&w, r).*;
             if (O.fieldValue(it, "hold") == null) {
-                if (O.fieldValue(it, "answer")) |prev| return fail("{s} non è in attesa: ha già la risposta \"{s}\" (nessuna modifica fatta)", .{ id, prev });
-                return fail("{s} non è in attesa di risposta (vedi `wk questions`)", .{id});
+                if (O.fieldValue(it, "answer")) |prev| return fail("{s} is not waiting: it already has answer \"{s}\" (no changes made)", .{ id, prev });
+                return fail("{s} is not waiting for an answer (see `wk questions`)", .{id});
             }
-            if (ans.len == 0) return fail("risposta vuota per {s}", .{id});
-            try noNewline(ans, "risposta");
+            if (ans.len == 0) return fail("empty answer for {s}", .{id});
+            try noNewline(ans, "answer");
         }
         k = 0;
         while (k < o.pos.items.len) : (k += 2) try resolveItem(c.a, &w, o.pos.items[k], W.trim(o.pos.items[k + 1]));
@@ -2281,7 +2281,7 @@ fn cmdReply(c: Ctx, o: *const Opts) !void {
     }
 
     const stdin = rt.File.stdin();
-    if (!(stdin.isTty(rt.io) catch false)) return fail("`wk reply` senza risposte è interattivo e richiede un terminale: è pensato per l'utente. Un agente deve usare `wk questions` per leggere le domande e `wk reply ID \"risposta\" …` per registrare le risposte.", .{});
+    if (!(stdin.isTty(rt.io) catch false)) return fail("`wk reply` without answers is interactive and requires a terminal. Agents must read questions with `wk questions` and record answers with `wk reply ID \"answer\" …`.", .{});
 
     const w0 = try W.load(c.a, dir);
     var ids: List = .empty;
@@ -2292,28 +2292,28 @@ fn cmdReply(c: Ctx, o: *const Opts) !void {
         try ids.append(c.a, it.id);
     };
     if (ids.items.len == 0) {
-        try out.writeAll(if (o.id != null) "Nessuna domanda in attesa per quell'ID.\n" else "Nessuna domanda in attesa.\n");
+        try out.writeAll(if (o.id != null) "No pending question for that ID.\n" else "No pending questions.\n");
         return;
     }
     var ibuf: [4096]u8 = undefined;
     var rd = stdin.readerStreaming(rt.io, &ibuf);
     var answered: usize = 0;
     var skipped: usize = 0;
-    try out.print("{d} domand{s} in attesa. Niente credenziali né dati personali nelle risposte.\n", .{ ids.items.len, if (ids.items.len == 1) "a" else "e" });
+    try out.print("{d} pending question{s}. Keep credentials and personal data out of answers.\n", .{ ids.items.len, if (ids.items.len == 1) "" else "s" });
     for (ids.items, 0..) |id, n| {
         const w = try W.load(c.a, dir);
         const r = W.findItem(&w, id) orelse continue;
         const it = W.item(&w, r).*;
         const q = O.fieldValue(it, "hold") orelse {
-            try out.print("\n[{d}/{d}] {s}: già risposta altrove, salto.\n", .{ n + 1, ids.items.len, id });
+            try out.print("\n[{d}/{d}] {s}: already answered elsewhere; skipping.\n", .{ n + 1, ids.items.len, id });
             continue;
         };
         const opts = try splitOptions(c.a, O.fieldValue(it, "hold_options"));
         const def = O.fieldValue(it, "hold_default");
         try out.print("\n[{d}/{d}] {s} · {s}\n{s}\n? {s}\n", .{ n + 1, ids.items.len, id, w.steps[it.step].key, it.label, q });
-        for (opts.items, 0..) |op, k| try out.print("  {d}) {s}{s}\n", .{ k + 1, op, if (def != null and std.mem.eql(u8, def.?, op)) "  (proposta)" else "" });
-        if (def != null and opts.items.len == 0) try out.print("  proposta: {s}\n", .{def.?});
-        try out.print("Risposta [{s}{s}invio = salta, q = esci]: ", .{ if (opts.items.len > 0) "numero o testo, " else "testo, ", if (def != null) "d = proposta, " else "" });
+        for (opts.items, 0..) |op, k| try out.print("  {d}) {s}{s}\n", .{ k + 1, op, if (def != null and std.mem.eql(u8, def.?, op)) "  (suggested)" else "" });
+        if (def != null and opts.items.len == 0) try out.print("  suggested: {s}\n", .{def.?});
+        try out.print("Answer [{s}{s}Enter = skip, q = quit]: ", .{ if (opts.items.len > 0) "number or text, " else "text, ", if (def != null) "d = suggestion, " else "" });
         try out.flush();
         const line = rd.interface.takeDelimiterInclusive('\n') catch |e| switch (e) {
             error.EndOfStream => break,
@@ -2338,34 +2338,34 @@ fn cmdReply(c: Ctx, o: *const Opts) !void {
             var w2 = try W.load(c.a, dir);
             const r2 = W.findItem(&w2, id) orelse continue;
             if (O.fieldValue(W.item(&w2, r2).*, "hold") == null) {
-                try out.writeAll("  (nel frattempo ha già una risposta: non modifico)\n");
+                try out.writeAll("  (already answered in the meantime; no changes)\n");
                 continue;
             }
             try resolveItem(c.a, &w2, id, ans);
             try W.save(c.a, &w2);
         }
         answered += 1;
-        try out.print("  ✓ registrata: {s}\n", .{ans});
+        try out.print("  ✓ saved: {s}\n", .{ans});
     }
-    try out.print("\nRegistrate {d}, saltate {d}.\n", .{ answered, skipped });
+    try out.print("\nSaved {d}, skipped {d}.\n", .{ answered, skipped });
 }
 
 fn cmdClaim(c: Ctx, o: *const Opts, claim: bool) !void {
     var w = try loadWork(c.a, o);
-    if (o.pos.items.len == 0) return fail("manca almeno un ID (vedi `wk {s} --help`)", .{if (claim) "claim" else "unclaim"});
+    if (o.pos.items.len == 0) return fail("at least one ID is required (see `wk {s} --help`)", .{if (claim) "claim" else "unclaim"});
     const by = W.trim(o.by orelse "agent");
-    if (by.len == 0) return fail("--by vuoto", .{});
+    if (by.len == 0) return fail("empty --by", .{});
     try noNewline(by, "--by");
     for (o.pos.items) |id| {
         const r = try needItem(&w, id);
         if (!claim) continue;
         const it = W.item(&w, r).*;
-        if (it.done) return fail("{s} è già completata", .{id});
-        if (O.fieldValue(it, "hold") != null) return fail("{s} è in attesa di risposta (vedi `wk questions`)", .{id});
+        if (it.done) return fail("{s} is already completed", .{id});
+        if (O.fieldValue(it, "hold") != null) return fail("{s} is waiting for an answer (see `wk questions`)", .{id});
         const od = try G.openDeps(c.a, &w, it);
-        if (od.len > 0) return fail("{s} ha dipendenze aperte: {s}", .{ id, try joinTags(c.a, od) });
+        if (od.len > 0) return fail("{s} has open dependencies: {s}", .{ id, try joinTags(c.a, od) });
         if (O.fieldValue(it, "claimed_by")) |cur| {
-            if (!std.ascii.eqlIgnoreCase(cur, by)) return fail("{s} è già in carico a '{s}'", .{ id, cur });
+            if (!std.ascii.eqlIgnoreCase(cur, by)) return fail("{s} is already claimed by '{s}'", .{ id, cur });
         }
     }
     for (o.pos.items) |id| {
@@ -2380,7 +2380,7 @@ fn cmdClaim(c: Ctx, o: *const Opts, claim: bool) !void {
 
 fn cmdBrief(c: Ctx, o: *const Opts) !void {
     const w = try loadWork(c.a, o);
-    if (o.pos.items.len == 0) return fail("manca almeno un ID (vedi `wk brief --help`)", .{});
+    if (o.pos.items.len == 0) return fail("at least one ID is required (see `wk brief --help`)", .{});
     for (o.pos.items) |id| _ = try needItem(&w, id);
     const out = c.out;
     for (o.pos.items, 0..) |id, n| {
@@ -2388,10 +2388,10 @@ fn cmdBrief(c: Ctx, o: *const Opts) !void {
         const it = W.item(&w, r).*;
         const step = w.steps[it.step];
         if (n > 0) try out.writeAll("\n---\n\n");
-        try out.print("# Delega {s} — {s}\n\n", .{ it.id, it.label });
-        try out.print("Work: {s}  (usa sempre `wk -w {s} …`)\nStep: {s} — {s}\n", .{ w.dir, w.dir, step.key, step.title });
+        try out.print("# Delegation {s} — {s}\n\n", .{ it.id, it.label });
+        try out.print("Work: {s}  (always use `wk -w {s} …`)\nStep: {s} — {s}\n", .{ w.dir, w.dir, step.key, step.title });
         const mode = O.fieldValue(it, "mode");
-        try out.print("Classificazione: {s}", .{mode orelse "non classificata"});
+        try out.print("Classification: {s}", .{mode orelse "unclassified"});
         if (O.fieldValue(it, "mode_reason")) |mr| try out.print(" — {s}", .{mr});
         try out.writeByte('\n');
         if (it.tags.len > 0) try out.print("Tag: {s}\n", .{try joinTags(c.a, it.tags)});
@@ -2399,40 +2399,40 @@ fn cmdBrief(c: Ctx, o: *const Opts) !void {
             if (std.ascii.eqlIgnoreCase(f.key, "mode") or std.ascii.eqlIgnoreCase(f.key, "mode_reason") or std.ascii.eqlIgnoreCase(f.key, "claimed_by")) continue;
             try out.print("{s}: {s}\n", .{ f.key, f.value });
         }
-        for (it.notes) |nt| try out.print("Nota: {s}\n", .{nt});
+        for (it.notes) |nt| try out.print("Note: {s}\n", .{nt});
         if (it.deps.len > 0) {
-            try out.writeAll("\nDipendenze dirette (da cui parte il lavoro):\n");
+            try out.writeAll("\nDirect dependencies (starting context):\n");
             for (it.deps) |d| {
                 const dr = W.findItem(&w, d) orelse {
-                    try out.print("  - {s} (voce non trovata)\n", .{d});
+                    try out.print("  - {s} (item not found)\n", .{d});
                     continue;
                 };
                 const di = W.item(&w, dr).*;
                 try out.print("  - {s} [{c}] {s}", .{ d, @as(u8, if (di.done) 'x' else ' '), di.label });
-                if (O.fieldValue(di, "result")) |res| try out.print(" — esito: {s}", .{res});
+                if (O.fieldValue(di, "result")) |res| try out.print(" — result: {s}", .{res});
                 try out.writeByte('\n');
             }
         }
         const deps_on = try G.dependents(c.a, &w, it.id);
         if (deps_on.len > 0) {
-            try out.writeAll("\nCompletandola sblocchi: ");
+            try out.writeAll("\nCompleting this unlocks: ");
             for (deps_on, 0..) |dr, i| try out.print("{s}{s}", .{ if (i > 0) ", " else "", W.item(&w, dr).id });
             try out.writeByte('\n');
         }
         try out.print(
             \\
-            \\## Regole
-            \\- Lavori SOLO su questa voce ({s}). Non modificare altre voci né l'entrypoint.
-            \\- Non fare domande all'utente: se serve una decisione o un'autorizzazione che non hai,
-            \\  `wk -w {s} hold {s} "domanda"` e fermati.
-            \\- Se emerge una dipendenza: `wk -w {s} dep add {s} DEP --reason "…"`; se serve il contesto
-            \\  complessivo: `wk -w {s} classify {s} --mode integrated --reason "…"`. In entrambi i casi fermati e riporta.
-            \\- Completa solo se hai verificato il risultato:
-            \\  `wk -w {s} check {s} --result "esito breve e verificabile"`.
-            \\- Risposta finale: cosa hai fatto, come l'hai verificato, file toccati, cosa deve sapere l'agente principale.
+            \\## Rules
+            \\- Work ONLY on this item ({s}). Do not modify other items or the entrypoint.
+            \\- Do not ask the user directly. If a decision or authorization is missing, record
+            \\  `wk -w {s} hold {s} "Question"` and stop.
+            \\- If a dependency emerges: `wk -w {s} dep add {s} DEP --reason "…"`; if wider context
+            \\  is needed: `wk -w {s} classify {s} --mode integrated --reason "…"`. Stop and report either case.
+            \\- Complete only after verifying the result:
+            \\  `wk -w {s} check {s} --result "Concise verified outcome"`.
+            \\- Report changes, verification, affected files, and context the main agent needs.
             \\
-            \\## Contesto fornito dall'agente principale
-            \\(da completare prima di avviare il sottoagente)
+            \\## Main agent context
+            \\(complete before launching the subagent)
             \\
         , .{ id, w.dir, id, w.dir, id, w.dir, id, w.dir, id });
     }
@@ -2472,7 +2472,7 @@ fn computeCounters(w: *const W.Work) Counters {
     return c;
 }
 
-const session_label = "Sessione automatica";
+const session_label = "Automatic session";
 const Session = struct { started: []const u8, baseline: i64, limit: i64, wait_min: i64 = 0, used_s: i64 = 0, delegate: bool = false };
 
 /// `avviata 2026-11-04T12:30:00Z; baseline 47; limite 100; stop a 147; attesa 30; usata 120`
@@ -2481,18 +2481,18 @@ fn parseSession(v: []const u8) ?Session {
     var it = std.mem.splitScalar(u8, v, ';');
     while (it.next()) |part| {
         const t = W.trim(part);
-        if (std.mem.startsWith(u8, t, "avviata ")) {
-            s.started = W.trim(t["avviata ".len..]);
+        if (std.mem.startsWith(u8, t, "started ")) {
+            s.started = W.trim(t["started ".len..]);
         } else if (std.mem.startsWith(u8, t, "baseline ")) {
             s.baseline = std.fmt.parseInt(i64, W.trim(t["baseline ".len..]), 10) catch return null;
-        } else if (std.mem.startsWith(u8, t, "limite ")) {
-            s.limit = std.fmt.parseInt(i64, W.trim(t["limite ".len..]), 10) catch return null;
-        } else if (std.mem.startsWith(u8, t, "attesa ")) {
-            s.wait_min = std.fmt.parseInt(i64, W.trim(t["attesa ".len..]), 10) catch 0;
-        } else if (std.mem.eql(u8, t, "deleghe")) {
+        } else if (std.mem.startsWith(u8, t, "limit ")) {
+            s.limit = std.fmt.parseInt(i64, W.trim(t["limit ".len..]), 10) catch return null;
+        } else if (std.mem.startsWith(u8, t, "wait ")) {
+            s.wait_min = std.fmt.parseInt(i64, W.trim(t["wait ".len..]), 10) catch 0;
+        } else if (std.mem.eql(u8, t, "delegate")) {
             s.delegate = true;
-        } else if (std.mem.startsWith(u8, t, "usata ")) {
-            s.used_s = std.fmt.parseInt(i64, W.trim(t["usata ".len..]), 10) catch 0;
+        } else if (std.mem.startsWith(u8, t, "used ")) {
+            s.used_s = std.fmt.parseInt(i64, W.trim(t["used ".len..]), 10) catch 0;
         }
     }
     if (s.baseline < 0 or s.limit < 0) return null;
@@ -2500,7 +2500,7 @@ fn parseSession(v: []const u8) ?Session {
 }
 
 fn fmtSession(a: std.mem.Allocator, s: Session) ![]const u8 {
-    return std.fmt.allocPrint(a, "avviata {s}; baseline {d}; limite {d}; stop a {d}; attesa {d}; usata {d}{s}", .{ s.started, s.baseline, s.limit, s.baseline + s.limit, s.wait_min, s.used_s, if (s.delegate) "; deleghe" else "" });
+    return std.fmt.allocPrint(a, "started {s}; baseline {d}; limit {d}; stop at {d}; wait {d}; used {d}{s}", .{ s.started, s.baseline, s.limit, s.baseline + s.limit, s.wait_min, s.used_s, if (s.delegate) "; delegate" else "" });
 }
 
 fn nowIso(a: std.mem.Allocator) ![]const u8 {
@@ -2525,15 +2525,15 @@ fn evalSession(cn: Counters, sess: Session) Eval {
     }
     const cont = std.mem.eql(u8, reason, "ok") or std.mem.eql(u8, reason, "waiting_for_answers") or std.mem.eql(u8, reason, "ask_user");
     const hint: []const u8 = if (std.mem.eql(u8, reason, "ok"))
-        (if (sess.delegate and cn.delegable > 0) "DELEGA ORA: ci sono voci isolated sbloccate (`wk list --delegable`): `wk claim ID --by subN`, `wk brief ID`, avvia i sottoagenti in background (max come da \"Politica deleghe\") e nel frattempo lavora le voci integrated; esiti: `wk check` dopo la tua revisione" else if (sess.delegate and cn.claimed > 0 and cn.avail == 0) "voci in carico ai sottoagenti: attendi gli esiti, rivedili e `wk check`" else if (cn.answered > 0) "ci sono risposte dell'utente da riprendere: `wk next` le restituisce per prime" else "prosegui con `wk next`: chiudere uno step o un traguardo non è uno stop")
+        (if (sess.delegate and cn.delegable > 0) "DELEGATE NOW: isolated items are ready (`wk list --delegable`): `wk claim ID --by subN`, `wk brief ID`, start background subagents within the Delegation policy limit and work on integrated items; review outcomes before `wk check`" else if (sess.delegate and cn.claimed > 0 and cn.avail == 0) "items claimed by subagents: wait for results, review them, then `wk check`" else if (cn.answered > 0) "user answers are available: `wk next` returns answered items first" else "continue with `wk next`: completing a step or milestone is not a stop")
     else if (std.mem.eql(u8, reason, "waiting_for_answers"))
-        "nulla da fare finché l'utente non risponde dalla dashboard: `wk auto wait --timeout 120` (poi di nuovo `wk auto status`)"
+        "waiting for dashboard answers: `wk auto wait --timeout 120`, then `wk auto status`"
     else if (std.mem.eql(u8, reason, "ask_user"))
-        "non resta altro da fare: presenta ORA le domande in chat con lo strumento nativo (`wk questions`), registra con `wk reply ID \"risposta\" …` e riprendi (vedi `wk help auto`)"
+        "no other work remains: present questions NOW in chat using the native question tool (`wk questions`), record with `wk reply ID \"answer\" …`, and resume (see `wk help auto`)"
     else if (std.mem.eql(u8, reason, "limit_reached"))
-        "scrivi il resoconto e chiudi con `wk auto stop`"
+        "report the outcome and close with `wk auto stop`"
     else if (std.mem.eql(u8, reason, "only_deferred"))
-        "restano solo voci ferme per domande rimandate dall'utente (`wk questions --deferred`): non riproporle; scrivi il resoconto (elenca le rimandate e quante voci fermano) e chiudi con `wk auto stop`"
+        "only user-deferred questions remain (`wk questions --deferred`): do not ask again; report them and their blocked item counts, then `wk auto stop`"
     else if (cn.held > 0)
         "wk questions"
     else if (cn.claimed > 0)
@@ -2556,7 +2556,7 @@ fn answeredIds(a: std.mem.Allocator, w: *const W.Work) ![]const []const u8 {
 fn printStatus(c: Ctx, o: *const Opts, w: *const W.Work, cn: Counters, sess: Session, ev: Eval, waited_s: ?i64) !void {
     const out = c.out;
     if (o.format == .text) {
-        try out.print("{s} ({s}): completate {d}/{d}, disponibili {d}, bloccate {d}, in attesa {d}, rimandate {d}, in carico {d}, risposte da riprendere {d}{s}{s}\n", .{ if (ev.cont) "continua" else "stop", ev.reason, ev.completed, sess.limit, cn.avail, cn.blocked, cn.held, cn.deferred, cn.claimed, cn.answered, if (ev.hint.len > 0) " — " else "", ev.hint });
+        try out.print("{s} ({s}): completed {d}/{d}, available {d}, blocked {d}, waiting {d}, deferred {d}, claimed {d}, answered {d}{s}{s}\n", .{ if (ev.cont) "continue" else "stop", ev.reason, ev.completed, sess.limit, cn.avail, cn.blocked, cn.held, cn.deferred, cn.claimed, cn.answered, if (ev.hint.len > 0) " — " else "", ev.hint });
         return;
     }
     try out.print("{{\"active\":true,\"continue\":{s},\"reason\":\"{s}\",\"completed\":{d},\"limit\":{d},\"remaining\":{d},\"available\":{d},\"blocked\":{d},\"held\":{d},\"deferred\":{d},\"claimed\":{d},\"delegate\":{s},\"delegable\":{d},\"answered\":{d},\"answered_ids\":[", .{ if (ev.cont) "true" else "false", ev.reason, ev.completed, sess.limit, sess.limit - ev.completed, cn.avail, cn.blocked, cn.held, cn.deferred, cn.claimed, if (sess.delegate) "true" else "false", cn.delegable, cn.answered });
@@ -2580,11 +2580,11 @@ fn cmdAutoWait(c: Ctx, o: *const Opts) !u8 {
     var budget_left: i64 = 0;
     {
         const a0 = c.a;
-        const e0 = (try E.Entry.load(a0, dir)) orelse return fail("serve {s}/entrypoint.md", .{dir});
-        const sess0 = (if (e0.get(session_label)) |v| parseSession(v) else null) orelse return fail("nessuna sessione automatica attiva (`wk auto start --limit N --wait MINUTI`)", .{});
-        if (sess0.wait_min == 0) return fail("la sessione non prevede attese dalla dashboard: se non resta altro da fare, presenta le domande in chat (`wk auto status`, `wk help auto`)", .{});
+        const e0 = (try E.Entry.load(a0, dir)) orelse return fail("requires {s}/entrypoint.md", .{dir});
+        const sess0 = (if (e0.get(session_label)) |v| parseSession(v) else null) orelse return fail("no active automatic session (`wk auto start --limit N --wait MINUTES`)", .{});
+        if (sess0.wait_min == 0) return fail("this session does not wait for dashboard answers: when no other work remains, present questions in chat (`wk auto status`, `wk help auto`)", .{});
         budget_left = sess0.wait_min * 60 - sess0.used_s;
-        if (budget_left <= 0) return fail("budget di attesa esaurito ({d} minuti): non attendere oltre, presenta le domande in chat (`wk auto status`, `wk help auto`)", .{sess0.wait_min});
+        if (budget_left <= 0) return fail("waiting budget exhausted ({d} minutes): present questions in chat now (`wk auto status`, `wk help auto`)", .{sess0.wait_min});
     }
     const cap = @min(timeout_s, budget_left);
     while (true) {
@@ -2603,9 +2603,9 @@ fn cmdAutoWait(c: Ctx, o: *const Opts) !u8 {
     defer unlockWork();
     const w = try W.load(c.a, dir);
     var entry = (try E.Entry.load(c.a, dir)).?;
-    var sess = parseSession(entry.get(session_label) orelse "") orelse return fail("sessione non leggibile", .{});
+    var sess = parseSession(entry.get(session_label) orelse "") orelse return fail("unreadable session", .{});
     sess.used_s += waited;
-    _ = try entry.set(c.a, session_label, try fmtSession(c.a, sess), "Avanzamento");
+    _ = try entry.set(c.a, session_label, try fmtSession(c.a, sess), "Progress");
     try entry.save(c.a);
     const cn = computeCounters(&w);
     const ev = evalSession(cn, sess);
@@ -2618,9 +2618,9 @@ fn cmdAuto(c: Ctx, o: *const Opts) !u8 {
     if (std.mem.eql(u8, sub, "wait")) return cmdAutoWait(c, o);
     const is_start = std.mem.eql(u8, sub, "start");
     const is_stop = std.mem.eql(u8, sub, "stop");
-    if (!is_start and !is_stop and !std.mem.eql(u8, sub, "status")) return fail("sottocomando '{s}': usa start, status, wait o stop (vedi `wk help auto`)", .{sub});
+    if (!is_start and !is_stop and !std.mem.eql(u8, sub, "status")) return fail("subcommand '{s}': use start, status, wait, or stop (see `wk help auto`)", .{sub});
     const w = try loadWork(c.a, o);
-    var entry = (try E.Entry.load(c.a, w.dir)) orelse return fail("serve {s}/entrypoint.md: la sessione si registra lì", .{w.dir});
+    var entry = (try E.Entry.load(c.a, w.dir)) orelse return fail("requires {s}/entrypoint.md: session is recorded there", .{w.dir});
     const cn = computeCounters(&w);
     const raw = entry.get(session_label);
     const existing = if (raw) |v| parseSession(v) else null;
@@ -2628,15 +2628,15 @@ fn cmdAuto(c: Ctx, o: *const Opts) !u8 {
 
     if (is_start) {
         if (raw != null and !o.force) {
-            if (existing) |ex| return fail("c'è già una sessione registrata (avviata {s}, baseline {d}, limite {d}). Non riprenderla senza una richiesta esplicita dell'utente: `wk auto status` per vederla, `wk auto stop` per chiuderla, `--force` per ricominciare.", .{ ex.started, ex.baseline, ex.limit });
-            return fail("il campo '{s}' esiste ma non è leggibile: usa --force per riscriverlo o `wk auto stop` per toglierlo", .{session_label});
+            if (existing) |ex| return fail("a session is already recorded (started {s}, baseline {d}, limit {d}). Resume only on explicit user request: inspect with `wk auto status`, close with `wk auto stop`, restart with --force.", .{ ex.started, ex.baseline, ex.limit });
+            return fail("field '{s}' exists but is unreadable: use --force to replace it or `wk auto stop` to remove it", .{session_label});
         }
-        const limit = o.limit orelse return fail("indica --limit N: quante voci completare in questa sessione (se l'utente non l'ha detto, chiediglielo prima di iniziare)", .{});
-        if (limit == 0) return fail("--limit deve essere maggiore di zero", .{});
+        const limit = o.limit orelse return fail("specify --limit N: how many items to complete in this session (ask the user before starting if not specified)", .{});
+        if (limit == 0) return fail("--limit must be greater than zero", .{});
         const started = try nowIso(c.a);
         const sess: Session = .{ .started = started, .baseline = @intCast(cn.done), .limit = @intCast(limit), .wait_min = o.wait_min orelse 0, .used_s = 0, .delegate = o.delegate };
-        _ = entry.set(c.a, session_label, try fmtSession(c.a, sess), "Avanzamento") catch |e| switch (e) {
-            error.NoSection => return fail("entrypoint.md non ha la sezione '## Current task'", .{}),
+        _ = entry.set(c.a, session_label, try fmtSession(c.a, sess), "Progress") catch |e| switch (e) {
+            error.NoSection => return fail("entrypoint.md does not have section '## Current task'", .{}),
             else => return e,
         };
         try entry.save(c.a);
@@ -2652,7 +2652,7 @@ fn cmdAuto(c: Ctx, o: *const Opts) !u8 {
         const completed: i64 = if (existing) |ex| @as(i64, @intCast(cn.done)) - ex.baseline else 0;
         if (existing) |ex| {
             const ev = evalSession(cn, ex);
-            if (ev.cont and !o.force) return fail("stop rifiutato: nessuna condizione di stop (reason \"{s}\", completate {d}/{d}, disponibili {d}). Completare uno step o chiudere un traguardo NON è uno stop: continua con `wk next`. `--force` solo se l'utente ti ha chiesto di fermarti, ha rimandato le domande o c'è un errore bloccante che non sai aggirare.", .{ ev.reason, ev.completed, ex.limit, cn.avail });
+            if (ev.cont and !o.force) return fail("stop refused: no stop condition (reason \"{s}\", completed {d}/{d}, available {d}). Completing a step or milestone is not a stop: continue with `wk next`. Use --force only if the user asked to stop, deferred questions, or an unavoidable blocking error prevents progress.", .{ ev.reason, ev.completed, ex.limit, cn.avail });
         }
         _ = try entry.unset(c.a, session_label);
         try entry.save(c.a);
@@ -2662,7 +2662,7 @@ fn cmdAuto(c: Ctx, o: *const Opts) !u8 {
 
     const sess = existing orelse {
         if (o.format == .text) {
-            try out.writeAll("nessuna sessione automatica attiva (avviala con: wk auto start --limit N)\n");
+            try out.writeAll("no active automatic session (start with: wk auto start --limit N)\n");
         } else {
             try out.print("{{\"active\":false,\"continue\":false,\"reason\":\"{s}\",\"hint\":\"wk auto start --limit N\"}}\n", .{if (raw != null) "unreadable_session" else "no_session"});
         }
@@ -2698,13 +2698,13 @@ fn run(c: Ctx, args: []const []const u8) !u8 {
                 try c.out.writeAll(t);
                 return 0;
             }
-            return fail("nessun aiuto per '{s}'", .{args[2]});
+            return fail("no help for '{s}'", .{args[2]});
         }
         try c.out.writeAll(H.main);
         return 0;
     }
     if (std.mem.eql(u8, cmd, "--version")) {
-        try c.out.print("wk {s} ({s}) · formato documenti {d}\n", .{ BO.version, BO.commit, F.current });
+        try c.out.print("wk {s} ({s}) · document format {d}\n", .{ BO.version, BO.commit, F.current });
         return 0;
     }
     const o = try parseOpts(c.a, cmd, args[2..]);
@@ -2764,7 +2764,7 @@ fn run(c: Ctx, args: []const []const u8) !u8 {
     else if (eq(u8, cmd, "entry")) try cmdEntry(c, &o)
     else if (eq(u8, cmd, "init")) try cmdInit(c, &o)
     else if (eq(u8, cmd, "hook")) return cmdHook(c, &o) catch 0
-    else return fail("comando sconosciuto '{s}'. Prova `wk help`", .{cmd});
+    else return fail("unknown command '{s}'. Try `wk help`", .{cmd});
     return 0;
 }
 
@@ -2787,12 +2787,12 @@ pub fn main(init: std.process.Init) !void {
         if (e == error.User) {
             ew.interface.print("error: {s}\n", .{g_msg}) catch {};
         } else {
-            ew.interface.print("errore interno: {s}\n", .{@errorName(e)}) catch {};
+            ew.interface.print("internal error: {s}\n", .{@errorName(e)}) catch {};
         }
         break :blk 1;
     };
     ow.interface.flush() catch {};
-    for (g_warns.items) |m| ew.interface.print("avviso: {s}\n", .{m}) catch {};
+    for (g_warns.items) |m| ew.interface.print("warning: {s}\n", .{m}) catch {};
     ew.interface.flush() catch {};
     std.process.exit(code);
 }
@@ -2813,4 +2813,21 @@ test "isPostponeText riconosce i rinvii e non le risposte normali" {
     try std.testing.expect(!isPostponeText("Rimane com'è"));
     try std.testing.expect(!isPostponeText("Stessa macchina"));
     try std.testing.expect(!isPostponeText("Differente da prima"));
+}
+
+test "English deferral choices and session round trip" {
+    try std.testing.expect(isPostponeText("Defer"));
+    try std.testing.expect(isPostponeText("Not yet"));
+    try std.testing.expect(isPostponeText("Later"));
+    try std.testing.expect(!isPostponeText("Use the latest release"));
+    const original: Session = .{ .started = "2026-11-13T12:00:00Z", .baseline = 4, .limit = 10, .wait_min = 5, .used_s = 20, .delegate = true };
+    const encoded = try fmtSession(std.testing.allocator, original);
+    defer std.testing.allocator.free(encoded);
+    const decoded = parseSession(encoded).?;
+    try std.testing.expectEqualStrings(original.started, decoded.started);
+    try std.testing.expectEqual(original.baseline, decoded.baseline);
+    try std.testing.expectEqual(original.limit, decoded.limit);
+    try std.testing.expectEqual(original.wait_min, decoded.wait_min);
+    try std.testing.expectEqual(original.used_s, decoded.used_s);
+    try std.testing.expectEqual(original.delegate, decoded.delegate);
 }
