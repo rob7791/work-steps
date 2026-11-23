@@ -36,7 +36,7 @@ The `wk` skill is in `.agents/skills/wk/` for Codex and Antigravity CLI; `.claud
 
 The plugin bundles the skills, a `bin/wk` launcher, and `SessionStart` and `Stop` hooks. The launcher selects a binary for Linux, macOS, or Windows on x86_64 or aarch64; without a bundled binary it uses `cli/zig-out/bin/wk` when available. Build releases with `scripts/build.sh [target…]` using Zig 0.17.x from a clean Git tree.
 
-The hooks run only in projects with a work. `SessionStart` points the agent to `wk` and reminds it of active automatic sessions after compaction; a session from an earlier conversation requires an explicit request to resume. `Stop` keeps an active automatic run going when work is available; user questions, reaching the limit, completion, an explicit forced stop, and repeated stalls allow it to stop. Test the plugin with `claude --plugin-dir ~/workspace/step-harness` and `claude plugin validate .`.
+The hooks run only in projects with a work. `SessionStart` points the agent to `wk` and reminds it of active automatic sessions after compaction; a session from an earlier conversation requires an explicit request to resume. `Stop` keeps an active automatic run going when work is available, but only for the conversation that started it (the session records its owner), so several agents can work on different works of the same project without holding each other; user questions, reaching the limit, completion, an explicit forced stop, and repeated stalls allow it to stop. Test the plugin with `claude --plugin-dir ~/workspace/step-harness` and `claude plugin validate .`.
 
 On Windows, the binary builds but concurrent writes by multiple subagents are not locked.
 

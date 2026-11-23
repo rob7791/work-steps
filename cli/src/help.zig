@@ -372,8 +372,10 @@ pub const cmd_hook =
     \\Plugin-only command; reads hook JSON from stdin. Outside a work project it has no effect.
     \\session-start provides work/CLI context and reminds the agent of active sessions after
     \\compaction. Sessions from earlier conversations require explicit user authorization.
-    \\stop prevents stopping only when an automatic session started in this conversation has
-    \\reason ok. Questions, limits, completion, and three reminders without progress allow stopping.
+    \\stop prevents stopping only when an automatic session started by this very conversation
+    \\(the session records its owner, CLAUDE_CODE_SESSION_ID, at `wk auto start`) has reason ok.
+    \\Other agents in the same project, old sessions and sessions without an owner never hold it.
+    \\Questions, limits, completion, and three reminders without progress allow stopping.
     \\Conversation state: $TMPDIR/work-steps-<session_id>.state.
     \\
 ;

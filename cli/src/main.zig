@@ -1566,16 +1566,17 @@ fn cmdHook(c: Ctx, o: *const Opts) !u8 {
         }
         const self_exe: []const u8 = std.process.executablePathAlloc(rt.io, c.a) catch "wk";
         var b: std.ArrayList(u8) = .empty;
-        try b.print(c.a, "Questo progetto ha dei work (", .{});
+        try b.print(c.a, "This project has works (", .{});
         for (works.items, 0..) |w, i| try b.print(c.a, "{s}{s}", .{ if (i > 0) ", " else "", std.fs.path.basename(w) });
         try b.print(c.a, "): read and update only through the `wk` CLI (wk skill). Resume with `wk steps` and `wk next`; do not read entrypoint.md and plan.md directly. If `wk` is not on PATH, the binary is {s}.", .{self_exe});
         for (works.items) |w| {
             if (sessionOf(c.a, w) == null) continue;
             const name = std.fs.path.basename(w);
-            if (std.mem.eql(u8, inp.source, "compact")) {
+            const sess_w = sessionOf(c.a, w).?;
+            if (std.mem.eql(u8, inp.source, "compact") and sess_w.owner.len > 0 and std.mem.eql(u8, sess_w.owner, inp.session_id)) {
                 try b.print(c.a, " ACTIVE AUTOMATIC SESSION on {s}: after compaction continue the loop (`wk auto status`, then `wk next`); see `wk help auto` for rules and stop conditions.", .{name});
             } else {
-                try b.print(c.a, " Work {s} has an automatic session from a previous conversation: resume only on explicit user request (`wk auto stop --force` closes it).", .{name});
+                try b.print(c.a, " Work {s} has an automatic session started by another conversation: do not resume or stop it unless the user explicitly asks (`wk auto stop --force` closes it).", .{name});
             }
         }
         try out.writeAll("{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":");
@@ -1587,8 +1588,9 @@ fn cmdHook(c: Ctx, o: *const Opts) !u8 {
     if (std.mem.eql(u8, sub, "stop")) {
         for (works.items) |wdir| {
             const sess = sessionOf(c.a, wdir) orelse continue;
-            // solo le sessioni avviate in questa conversazione: una sessione vecchia non deve trattenere l'agente
-            if (st.start.len == 0 or std.mem.order(u8, sess.started, st.start) == .lt) continue;
+            // only the conversation that started the session is held (owner = its id): another agent working on
+            // another work in the same project, an old session or one without an owner never holds this agent
+            if (sess.owner.len == 0 or !std.mem.eql(u8, sess.owner, inp.session_id)) continue;
             const w = W.load(c.a, wdir) catch continue;
             const cn = computeCounters(&w);
             const ev = evalSession(cn, sess);
@@ -2473,7 +2475,7 @@ fn computeCounters(w: *const W.Work) Counters {
 }
 
 const session_label = "Automatic session";
-const Session = struct { started: []const u8, baseline: i64, limit: i64, wait_min: i64 = 0, used_s: i64 = 0, delegate: bool = false };
+const Session = struct { started: []const u8, baseline: i64, limit: i64, wait_min: i64 = 0, used_s: i64 = 0, delegate: bool = false, owner: []const u8 = "" };
 
 /// `avviata 2026-11-04T12:30:00Z; baseline 47; limite 100; stop a 147; attesa 30; usata 120`
 fn parseSession(v: []const u8) ?Session {
@@ -2489,6 +2491,8 @@ fn parseSession(v: []const u8) ?Session {
             s.limit = std.fmt.parseInt(i64, W.trim(t["limit ".len..]), 10) catch return null;
         } else if (std.mem.startsWith(u8, t, "wait ")) {
             s.wait_min = std.fmt.parseInt(i64, W.trim(t["wait ".len..]), 10) catch 0;
+        } else if (std.mem.startsWith(u8, t, "owner ")) {
+            s.owner = W.trim(t["owner ".len..]);
         } else if (std.mem.eql(u8, t, "delegate")) {
             s.delegate = true;
         } else if (std.mem.startsWith(u8, t, "used ")) {
@@ -2500,7 +2504,7 @@ fn parseSession(v: []const u8) ?Session {
 }
 
 fn fmtSession(a: std.mem.Allocator, s: Session) ![]const u8 {
-    return std.fmt.allocPrint(a, "started {s}; baseline {d}; limit {d}; stop at {d}; wait {d}; used {d}{s}", .{ s.started, s.baseline, s.limit, s.baseline + s.limit, s.wait_min, s.used_s, if (s.delegate) "; delegate" else "" });
+    return std.fmt.allocPrint(a, "started {s}; baseline {d}; limit {d}; stop at {d}; wait {d}; used {d}{s}{s}{s}", .{ s.started, s.baseline, s.limit, s.baseline + s.limit, s.wait_min, s.used_s, if (s.delegate) "; delegate" else "", if (s.owner.len > 0) "; owner " else "", s.owner });
 }
 
 fn nowIso(a: std.mem.Allocator) ![]const u8 {
@@ -2613,6 +2617,13 @@ fn cmdAutoWait(c: Ctx, o: *const Opts) !u8 {
     return if (o.exit_code and !ev.cont) 3 else 0;
 }
 
+/// Conversation that starts the session (Claude Code exposes it in CLAUDE_CODE_SESSION_ID): only that conversation is held by the Stop hook.
+fn ownerId(a: std.mem.Allocator) []const u8 {
+    const v = getEnv(a, "CLAUDE_CODE_SESSION_ID") orelse return "";
+    for (v) |ch| if (!(std.ascii.isAlphanumeric(ch) or ch == '-' or ch == '_')) return "";
+    return v;
+}
+
 fn cmdAuto(c: Ctx, o: *const Opts) !u8 {
     const sub = if (o.pos.items.len > 0) o.pos.items[0] else "status";
     if (std.mem.eql(u8, sub, "wait")) return cmdAutoWait(c, o);
@@ -2634,7 +2645,7 @@ fn cmdAuto(c: Ctx, o: *const Opts) !u8 {
         const limit = o.limit orelse return fail("specify --limit N: how many items to complete in this session (ask the user before starting if not specified)", .{});
         if (limit == 0) return fail("--limit must be greater than zero", .{});
         const started = try nowIso(c.a);
-        const sess: Session = .{ .started = started, .baseline = @intCast(cn.done), .limit = @intCast(limit), .wait_min = o.wait_min orelse 0, .used_s = 0, .delegate = o.delegate };
+        const sess: Session = .{ .started = started, .baseline = @intCast(cn.done), .limit = @intCast(limit), .wait_min = o.wait_min orelse 0, .used_s = 0, .delegate = o.delegate, .owner = ownerId(c.a) };
         _ = entry.set(c.a, session_label, try fmtSession(c.a, sess), "Progress") catch |e| switch (e) {
             error.NoSection => return fail("entrypoint.md does not have section '## Current task'", .{}),
             else => return e,
@@ -2830,4 +2841,14 @@ test "English deferral choices and session round trip" {
     try std.testing.expectEqual(original.wait_min, decoded.wait_min);
     try std.testing.expectEqual(original.used_s, decoded.used_s);
     try std.testing.expectEqual(original.delegate, decoded.delegate);
+}
+
+test "Session: owner survives format and parse" {
+    const a = std.testing.allocator;
+    const txt = try fmtSession(a, .{ .started = "2026-11-23T10:00:00Z", .baseline = 3, .limit = 10, .owner = "abc-123" });
+    defer a.free(txt);
+    const s = parseSession(txt).?;
+    try std.testing.expectEqualStrings("abc-123", s.owner);
+    try std.testing.expectEqual(@as(i64, 10), s.limit);
+    try std.testing.expectEqualStrings("", parseSession("started x; baseline 0; limit 5").?.owner);
 }
