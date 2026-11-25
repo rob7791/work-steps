@@ -10,6 +10,7 @@ Always read and modify work Markdown through `wk`.
 - Binary: `wk` on PATH, otherwise `cli/zig-out/bin/wk` (build: `cd cli && zig build -Doptimize=ReleaseSafe`). Commands and formats: `wk help`, `wk help <command|format|filters>`.
 - Create works following `wk help init`. Follow document migration warnings with `wk migrate --from N`.
 - Specify `-w DIR` when multiple works exist.
+- List the project's works with `wk overview` (alias `wk works`): progress, pending questions and active automatic session per work. With several works, always pass `-w .work/<name>`.
 - Resume with `wk steps` and `wk next`. Read plans by section with `wk plan` and `wk plan "Title"`, only as needed. Do not read entrypoint.md or plan.md directly. Use `wk entry slim` if validation reports an oversized entrypoint.
 - Inspect existing keys and tags before writing (`wk steps`, `wk keys`, `wk tags`). Reuse their names; review new-key/new-tag warnings and correct synonyms.
 - Minimize reads with filters, `--count`, `--brief`, `--fields`, and `--limit` (see `wk help output`). Read abbreviated fields in full only when necessary.

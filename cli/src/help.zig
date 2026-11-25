@@ -8,6 +8,7 @@ pub const main =
     \\
     \\READ
     \\  steps        Progress, counters, existing keys and tags
+    \\  overview     Index of the works with progress (alias: works)
     \\  list         List, filter, and sort items
     \\  get ID       Read an item
     \\  next         Next available open item
@@ -147,6 +148,17 @@ pub const cmd_steps =
     \\Work/step progress and counters: done, total, open, available, blocked, held, claimed,
     \\delegable, answered; existing keys and tags; step key, file, title, status, done, total.
     \\Available means open with no open dependencies, hold, or claim. Delegable also requires isolated mode.
+    \\
+;
+
+pub const cmd_overview =
+    \\wk overview   (alias: wk works)
+    \\
+    \\Index of the works of the project: one row per work with progress and minimal info.
+    \\Fields: work, dir, done, total, open, available, blocked, held, deferred, claimed,
+    \\auto (automatic session active), step (first step with open items).
+    \\Looks for works from the current directory (or --work DIR) and, inside a work,
+    \\lists its siblings. `--format text` prints a table; `--format ids` the work names.
     \\
 ;
 

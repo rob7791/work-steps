@@ -527,6 +527,58 @@ fn noNewline(s: []const u8, what: []const u8) !void {
     if (std.mem.indexOfAny(u8, s, "\r\n") != null) return fail("{s}: cannot contain newlines", .{what});
 }
 
+/// `wk overview` (alias `works`): index of the works with progress and minimal info.
+fn cmdOverview(c: Ctx, o: *const Opts) !void {
+    var found = try findWorks(c.a, o.work orelse getEnv(c.a, "WK_WORK") orelse "");
+    // inside a work (or given a work as start): show its siblings too
+    if (found.items.len == 1) if (std.fs.path.dirname(found.items[0])) |par| {
+        if (std.mem.eql(u8, std.fs.path.basename(par), ".work")) found = try worksIn(c.a, par);
+    };
+    if (found.items.len == 0) return fail("no work found from the current directory. Use --work DIR or `wk init DIR`", .{});
+    const out = c.out;
+    if (o.format == .json) try out.writeAll("{\"works\":[");
+    for (found.items, 0..) |dir, i| {
+        const name = std.fs.path.basename(dir);
+        if (o.format == .ids) {
+            try out.print("{s}\n", .{name});
+            continue;
+        }
+        const w = W.load(c.a, dir) catch |e| {
+            if (o.format == .json) {
+                if (i > 0) try out.writeByte(',');
+                try out.writeAll("{\"work\":");
+                try O.jstr(out, name);
+                try out.print(",\"error\":\"{s}\"}}", .{@errorName(e)});
+            } else try out.print("{s}  (unreadable: {s})\n", .{ name, @errorName(e) });
+            continue;
+        };
+        const cn = computeCounters(&w);
+        var total: usize = 0;
+        var step: ?[]const u8 = null;
+        for (w.steps) |s| {
+            total += s.items.len;
+            if (step == null) for (s.items) |it| if (!it.done) {
+                step = s.key;
+                break;
+            };
+        }
+        const auto = sessionOf(c.a, dir) != null;
+        if (o.format == .text) {
+            try out.print("{s: <28} {d: >3}/{d: <3} step {s: <10} available {d} · waiting {d} · deferred {d}{s}\n", .{ name, cn.done, total, step orelse "-", cn.avail, cn.held, cn.deferred, if (auto) " · auto" else "" });
+            continue;
+        }
+        if (i > 0) try out.writeByte(',');
+        try out.writeAll("{\"work\":");
+        try O.jstr(out, name);
+        try out.writeAll(",\"dir\":");
+        try O.jstr(out, dir);
+        try out.print(",\"done\":{d},\"total\":{d},\"open\":{d},\"available\":{d},\"blocked\":{d},\"held\":{d},\"deferred\":{d},\"claimed\":{d},\"auto\":{s},\"step\":", .{ cn.done, total, cn.open, cn.avail, cn.blocked, cn.held, cn.deferred, cn.claimed, if (auto) "true" else "false" });
+        if (step) |k| try O.jstr(out, k) else try out.writeAll("null");
+        try out.writeByte('}');
+    }
+    if (o.format == .json) try out.writeAll("]}\n");
+}
+
 fn cmdSteps(c: Ctx, o: *const Opts) !void {
     const w = try loadWork(c.a, o);
     var done: usize = 0;
@@ -2687,7 +2739,7 @@ fn cmdAuto(c: Ctx, o: *const Opts) !u8 {
 fn helpFor(cmd: []const u8) ?[]const u8 {
     const m = std.StaticStringMap([]const u8).initComptime(.{
         .{ "list", H.cmd_list },       .{ "get", H.cmd_get },         .{ "next", H.cmd_next },
-        .{ "steps", H.cmd_steps },     .{ "tags", H.cmd_tags }, .{ "keys", H.cmd_keys }, .{ "classify", H.cmd_classify }, .{ "hold", H.cmd_hold }, .{ "defer", H.cmd_hold }, .{ "undefer", H.cmd_hold }, .{ "resolve", H.cmd_hold }, .{ "questions", H.cmd_hold }, .{ "reply", H.cmd_reply }, .{ "claim", H.cmd_claim }, .{ "unclaim", H.cmd_claim }, .{ "brief", H.cmd_brief }, .{ "auto", H.auto }, .{ "version", H.cmd_version }, .{ "migrate", H.cmd_migrate }, .{ "dep", H.cmd_dep }, .{ "deps", H.cmd_deps }, .{ "waves", H.cmd_waves }, .{ "section", H.cmd_section }, .{ "plan", H.cmd_plan }, .{ "hook", H.cmd_hook }, .{ "step-set", H.cmd_step_set }, .{ "delegation", H.delegation }, .{ "output", H.output },       .{ "add", H.cmd_add },
+        .{ "steps", H.cmd_steps }, .{ "overview", H.cmd_overview }, .{ "works", H.cmd_overview },     .{ "tags", H.cmd_tags }, .{ "keys", H.cmd_keys }, .{ "classify", H.cmd_classify }, .{ "hold", H.cmd_hold }, .{ "defer", H.cmd_hold }, .{ "undefer", H.cmd_hold }, .{ "resolve", H.cmd_hold }, .{ "questions", H.cmd_hold }, .{ "reply", H.cmd_reply }, .{ "claim", H.cmd_claim }, .{ "unclaim", H.cmd_claim }, .{ "brief", H.cmd_brief }, .{ "auto", H.auto }, .{ "version", H.cmd_version }, .{ "migrate", H.cmd_migrate }, .{ "dep", H.cmd_dep }, .{ "deps", H.cmd_deps }, .{ "waves", H.cmd_waves }, .{ "section", H.cmd_section }, .{ "plan", H.cmd_plan }, .{ "hook", H.cmd_hook }, .{ "step-set", H.cmd_step_set }, .{ "delegation", H.delegation }, .{ "output", H.output },       .{ "add", H.cmd_add },
         .{ "check", H.cmd_check },     .{ "uncheck", H.cmd_check },   .{ "edit", H.cmd_edit },
         .{ "set", H.cmd_set },         .{ "unset", H.cmd_set },       .{ "tag", H.cmd_tag },
         .{ "rm", H.cmd_rm },           .{ "assign-ids", H.cmd_assign }, .{ "validate", H.cmd_validate },
@@ -2727,6 +2779,7 @@ fn run(c: Ctx, args: []const []const u8) !u8 {
     }
     const eq = std.mem.eql;
     if (eq(u8, cmd, "steps")) try cmdSteps(c, &o)
+    else if (eq(u8, cmd, "overview") or eq(u8, cmd, "works")) try cmdOverview(c, &o)
     else if (eq(u8, cmd, "list")) try cmdList(c, &o, false)
     else if (eq(u8, cmd, "next")) try cmdList(c, &o, true)
     else if (eq(u8, cmd, "get")) try cmdGet(c, &o)
